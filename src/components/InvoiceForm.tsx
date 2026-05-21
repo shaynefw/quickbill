@@ -47,7 +47,9 @@ export default function InvoiceForm({
   const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [showSaveMenu, setShowSaveMenu] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const saveMenuRef = useRef<HTMLDivElement>(null);
+  const quickAddRef = useRef<HTMLDivElement>(null);
   const [clientId, setClientId] = useState(initialData?.clientId || "");
   const [invoiceNumber, setInvoiceNumber] = useState(
     initialData?.invoiceNumber || ""
@@ -89,11 +91,14 @@ export default function InvoiceForm({
     }
   }, [initialData, invoiceNumber]);
 
-  // Close save menu on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (saveMenuRef.current && !saveMenuRef.current.contains(e.target as Node)) {
         setShowSaveMenu(false);
+      }
+      if (quickAddRef.current && !quickAddRef.current.contains(e.target as Node)) {
+        setShowQuickAdd(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -263,30 +268,39 @@ export default function InvoiceForm({
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold">Line Items</h2>
           {presetItems.length > 0 && (
-            <div className="relative group">
-              <button className="text-sm text-primary hover:underline flex items-center gap-1">
+            <div className="relative" ref={quickAddRef}>
+              <button
+                onClick={() => setShowQuickAdd(!showQuickAdd)}
+                className="text-sm text-primary hover:underline flex items-center gap-1"
+              >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Quick Add
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
-              <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-10 min-w-[220px] hidden group-hover:block">
-                {presetItems.map((preset) => (
-                  <button
-                    key={preset.id}
-                    onClick={() => addPresetItem(preset)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm border-b border-border last:border-0 flex justify-between items-center gap-4"
-                  >
-                    <div>
-                      <p className="font-medium">{preset.name}</p>
-                      <p className="text-xs text-muted">{preset.description}</p>
-                    </div>
-                    <span className="text-xs font-mono text-muted whitespace-nowrap">
-                      ${preset.rate.toFixed(2)}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {showQuickAdd && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-10 min-w-[240px] py-1">
+                  <p className="px-4 py-1.5 text-xs font-medium text-muted uppercase tracking-wide">Preset Items</p>
+                  {presetItems.map((preset) => (
+                    <button
+                      key={preset.id}
+                      onClick={() => { addPresetItem(preset); setShowQuickAdd(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm flex justify-between items-center gap-4"
+                    >
+                      <div>
+                        <p className="font-medium">{preset.name}</p>
+                        <p className="text-xs text-muted">{preset.description}</p>
+                      </div>
+                      <span className="text-xs font-mono text-muted whitespace-nowrap">
+                        ${preset.rate.toFixed(2)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

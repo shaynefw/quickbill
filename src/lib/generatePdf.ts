@@ -56,68 +56,82 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
 
   let yPos = 16;
 
+  // === LEFT SIDE: Logo + Company Info ===
+  const leftStartY = yPos;
+
   // Logo
   if (user.logoUrl && user.logoUrl.startsWith("data:image")) {
     try {
-      doc.addImage(user.logoUrl, "PNG", margin, yPos, 30, 15);
-      yPos += 18;
+      doc.addImage(user.logoUrl, "PNG", margin, yPos, 32, 16);
+      yPos += 20;
     } catch {
       // Skip logo if it fails
     }
   }
 
   // Company name
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setTextColor(...primaryRgb);
   doc.setFont("helvetica", "bold");
   doc.text(user.companyName, margin, yPos);
-
-  // INVOICE title on right
-  doc.setFontSize(24);
-  doc.text("INVOICE", pageWidth - margin, yPos, { align: "right" });
-
   yPos += 6;
+
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
   doc.setFont("helvetica", "normal");
 
   if (user.companyEmail) {
     doc.text(user.companyEmail, margin, yPos);
-    yPos += 4;
+    yPos += 4.5;
   }
   if (user.companyPhone) {
     doc.text(user.companyPhone, margin, yPos);
-    yPos += 4;
+    yPos += 4.5;
   }
   if (user.companyAddress) {
     const lines = user.companyAddress.split("\n");
     lines.forEach((line) => {
       doc.text(line, margin, yPos);
-      yPos += 4;
+      yPos += 4.5;
     });
   }
 
-  // Invoice meta on right
-  const metaX = pageWidth - margin;
-  let metaY = yPos - 12;
-  doc.setFontSize(9);
-  doc.setTextColor(100, 116, 139);
-  doc.text("Invoice #:", metaX - 40, metaY);
-  doc.setTextColor(15, 23, 42);
-  doc.text(invoice.invoiceNumber, metaX, metaY, { align: "right" });
-  metaY += 5;
-  doc.setTextColor(100, 116, 139);
-  doc.text("Date:", metaX - 40, metaY);
-  doc.setTextColor(15, 23, 42);
-  doc.text(new Date(invoice.issueDate).toLocaleDateString(), metaX, metaY, { align: "right" });
-  metaY += 5;
-  doc.setTextColor(100, 116, 139);
-  doc.text("Due Date:", metaX - 40, metaY);
-  doc.setTextColor(15, 23, 42);
-  doc.text(new Date(invoice.dueDate).toLocaleDateString(), metaX, metaY, { align: "right" });
+  const leftEndY = yPos;
 
-  // Divider line
-  yPos = Math.max(yPos, metaY) + 8;
+  // === RIGHT SIDE: INVOICE title + meta (positioned independently) ===
+  const metaX = pageWidth - margin;
+  let rightY = leftStartY;
+
+  // INVOICE title
+  doc.setFontSize(24);
+  doc.setTextColor(...primaryRgb);
+  doc.setFont("helvetica", "bold");
+  doc.text("INVOICE", metaX, rightY + 4, { align: "right" });
+  rightY += 14;
+
+  // Invoice meta
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+
+  doc.setTextColor(100, 116, 139);
+  doc.text("Invoice #:", metaX - 45, rightY);
+  doc.setTextColor(15, 23, 42);
+  doc.text(invoice.invoiceNumber, metaX, rightY, { align: "right" });
+  rightY += 5.5;
+
+  doc.setTextColor(100, 116, 139);
+  doc.text("Date:", metaX - 45, rightY);
+  doc.setTextColor(15, 23, 42);
+  doc.text(new Date(invoice.issueDate).toLocaleDateString(), metaX, rightY, { align: "right" });
+  rightY += 5.5;
+
+  doc.setTextColor(100, 116, 139);
+  doc.text("Due Date:", metaX - 45, rightY);
+  doc.setTextColor(15, 23, 42);
+  doc.text(new Date(invoice.dueDate).toLocaleDateString(), metaX, rightY, { align: "right" });
+
+  // Divider line — use the taller of the two columns
+  yPos = Math.max(leftEndY, rightY) + 10;
   doc.setDrawColor(...primaryRgb);
   doc.setLineWidth(0.8);
   doc.line(margin, yPos, pageWidth - margin, yPos);

@@ -2,21 +2,37 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { generateInvoicePdf } from "@/lib/generatePdf";
 
 export default function InvoiceActions({
   invoiceId,
   status,
+  clientEmail,
+  invoiceNumber,
 }: {
   invoiceId: string;
   status: string;
+  clientEmail?: string;
+  invoiceNumber?: string;
 }) {
   const router = useRouter();
-  const [sending, setSending] = useState(false);
+  const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   async function downloadPdf() {
+    setOpen(false);
     setDownloading(true);
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/pdf`);
@@ -29,22 +45,20 @@ export default function InvoiceActions({
     setDownloading(false);
   }
 
-  async function sendInvoice() {
-    setSending(true);
-    const res = await fetch(`/api/invoices/${invoiceId}/send`, {
-      method: "POST",
-    });
-    setSending(false);
-    if (res.ok) {
-      alert("Invoice sent successfully!");
-      router.refresh();
-    } else {
-      const data = await res.json();
-      alert(data.error || "Failed to send invoice.");
-    }
+  function openEmail() {
+    setOpen(false);
+    const to = clientEmail || "";
+    const subject = encodeURIComponent(
+      `Invoice ${invoiceNumber || ""}`
+    );
+    const body = encodeURIComponent(
+      `Hi,\n\nPlease find attached invoice ${invoiceNumber || ""}.\n\nThank you!`
+    );
+    window.open(`mailto:${to}?subject=${subject}&body=${body}`, "_self");
   }
 
   async function markSent() {
+    setOpen(false);
     await fetch(`/api/invoices/${invoiceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -54,6 +68,7 @@ export default function InvoiceActions({
   }
 
   async function markPaid() {
+    setOpen(false);
     await fetch(`/api/invoices/${invoiceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -63,6 +78,7 @@ export default function InvoiceActions({
   }
 
   async function undoPaid() {
+    setOpen(false);
     await fetch(`/api/invoices/${invoiceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -72,110 +88,99 @@ export default function InvoiceActions({
   }
 
   async function deleteInvoice() {
+    setOpen(false);
     if (!confirm("Delete this invoice? This cannot be undone.")) return;
     await fetch(`/api/invoices/${invoiceId}`, { method: "DELETE" });
     router.push("/invoices");
     router.refresh();
   }
 
+  // Primary status button shown above the dropdown
+  const primaryAction =
+    status === "draft"
+      ? { label: "Mark as Sent", onClick: markSent, color: "bg-primary hover:bg-primary-dark text-white" }
+      : status === "sent"
+      ? { label: "Mark as Paid", onClick: markPaid, color: "bg-green-600 hover:bg-green-700 text-white" }
+      : status === "paid"
+      ? { label: "Undo Payment", onClick: undoPaid, color: "bg-amber-500 hover:bg-amber-600 text-white" }
+      : null;
+
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {/* Download PDF */}
-      <button
-        onClick={downloadPdf}
-        disabled={downloading}
-        className="p-1.5 text-muted hover:text-primary rounded disabled:opacity-50"
-        title="Download PDF"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      </button>
-
-      {/* Status-dependent actions */}
-      {status === "draft" && (
-        <>
-          <button
-            onClick={markSent}
-            className="p-1.5 text-muted hover:text-primary rounded"
-            title="Mark as sent"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </button>
-          <button
-            onClick={sendInvoice}
-            disabled={sending}
-            className="p-1.5 text-muted hover:text-primary rounded disabled:opacity-50"
-            title="Send via email"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </button>
-        </>
-      )}
-
-      {status === "sent" && (
-        <>
-          <button
-            onClick={markPaid}
-            className="p-1.5 text-muted hover:text-success rounded"
-            title="Mark as paid"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </button>
-          <button
-            onClick={sendInvoice}
-            disabled={sending}
-            className="p-1.5 text-muted hover:text-primary rounded disabled:opacity-50"
-            title="Resend via email"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </button>
-        </>
-      )}
-
-      {status === "paid" && (
+    <div className="flex items-center gap-2" ref={menuRef}>
+      {/* Primary status action button */}
+      {primaryAction && (
         <button
-          onClick={undoPaid}
-          className="p-1.5 text-muted hover:text-warning rounded"
-          title="Undo mark as paid"
+          onClick={primaryAction.onClick}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${primaryAction.color}`}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-          </svg>
+          {primaryAction.label}
         </button>
       )}
 
-      {/* Edit — only for draft/sent */}
-      {status !== "paid" && (
-        <Link
-          href={`/invoices/${invoiceId}/edit`}
-          className="p-1.5 text-muted hover:text-primary rounded"
-          title="Edit"
+      {/* Actions dropdown */}
+      <div className="relative">
+        <button
+          onClick={() => setOpen(!open)}
+          className="p-1.5 text-muted hover:text-primary rounded hover:bg-gray-100 transition"
+          title="More actions"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
           </svg>
-        </Link>
-      )}
+        </button>
 
-      {/* Delete */}
-      <button
-        onClick={deleteInvoice}
-        className="p-1.5 text-muted hover:text-danger rounded"
-        title="Delete"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-      </button>
+        {open && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-20 min-w-[180px] py-1">
+            <button
+              onClick={downloadPdf}
+              disabled={downloading}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-3 disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              {downloading ? "Generating..." : "Download PDF"}
+            </button>
+
+            <button
+              onClick={openEmail}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-3"
+            >
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Send via Email
+            </button>
+
+            {status !== "paid" && (
+              <>
+                <div className="border-t border-border my-1" />
+                <Link
+                  href={`/invoices/${invoiceId}/edit`}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-3"
+                  onClick={() => setOpen(false)}
+                >
+                  <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit Invoice
+                </Link>
+              </>
+            )}
+
+            <div className="border-t border-border my-1" />
+            <button
+              onClick={deleteInvoice}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-3"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@ export default async function InvoicesPage() {
                       Due {new Date(inv.dueDate).toLocaleDateString()}
                     </p>
                   </div>
-                  <InvoiceActions invoiceId={inv.id} status={inv.status} />
+                  <InvoiceActions invoiceId={inv.id} status={inv.status} clientEmail={inv.client.email} invoiceNumber={inv.invoiceNumber} />
                 </div>
               </div>
             ))}
@@ -115,7 +115,7 @@ export default async function InvoicesPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3">
-                      <InvoiceActions invoiceId={inv.id} status={inv.status} />
+                      <InvoiceActions invoiceId={inv.id} status={inv.status} clientEmail={inv.client.email} invoiceNumber={inv.invoiceNumber} />
                     </td>
                   </tr>
                 ))}

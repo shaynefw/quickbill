@@ -152,7 +152,7 @@ export default function InvoiceForm({
 
   return (
     <div className="max-w-4xl">
-      <div className="bg-card-bg rounded-xl border border-border p-6 mb-6">
+      <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6 mb-6">
         <h2 className="font-semibold mb-4">Invoice Details</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -203,10 +203,11 @@ export default function InvoiceForm({
         </div>
       </div>
 
-      <div className="bg-card-bg rounded-xl border border-border p-6 mb-6">
+      <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6 mb-6">
         <h2 className="font-semibold mb-4">Line Items</h2>
         <div className="space-y-3">
-          <div className="grid grid-cols-12 gap-3 text-xs font-medium text-muted px-1">
+          {/* Desktop header */}
+          <div className="hidden sm:grid grid-cols-12 gap-3 text-xs font-medium text-muted px-1">
             <div className="col-span-5">Description</div>
             <div className="col-span-2">Quantity</div>
             <div className="col-span-2">Rate ($)</div>
@@ -214,54 +215,77 @@ export default function InvoiceForm({
             <div className="col-span-1"></div>
           </div>
           {items.map((item, index) => (
-            <div key={item.id} className="grid grid-cols-12 gap-3 items-center">
-              <div className="col-span-5">
+            <div key={item.id}>
+              {/* Desktop row */}
+              <div className="hidden sm:grid grid-cols-12 gap-3 items-center">
+                <div className="col-span-5">
+                  <input
+                    value={item.description}
+                    onChange={(e) => updateItem(index, "description", e.target.value)}
+                    placeholder="Item description"
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <input
+                    type="number" min="1" step="0.01" value={item.quantity}
+                    onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <input
+                    type="number" min="0" step="0.01" value={item.rate}
+                    onChange={(e) => updateItem(index, "rate", parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+                  />
+                </div>
+                <div className="col-span-2 text-sm font-medium px-1">${item.amount.toFixed(2)}</div>
+                <div className="col-span-1">
+                  <button onClick={() => removeItem(index)} className="p-1.5 text-muted hover:text-danger rounded" disabled={items.length <= 1}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              {/* Mobile stacked layout */}
+              <div className="sm:hidden border border-border rounded-lg p-3 space-y-2">
                 <input
                   value={item.description}
-                  onChange={(e) =>
-                    updateItem(index, "description", e.target.value)
-                  }
+                  onChange={(e) => updateItem(index, "description", e.target.value)}
                   placeholder="Item description"
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm"
                 />
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={item.quantity}
-                  onChange={(e) =>
-                    updateItem(index, "quantity", parseFloat(e.target.value) || 0)
-                  }
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm"
-                />
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={item.rate}
-                  onChange={(e) =>
-                    updateItem(index, "rate", parseFloat(e.target.value) || 0)
-                  }
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm"
-                />
-              </div>
-              <div className="col-span-2 text-sm font-medium px-1">
-                ${item.amount.toFixed(2)}
-              </div>
-              <div className="col-span-1">
-                <button
-                  onClick={() => removeItem(index)}
-                  className="p-1.5 text-muted hover:text-danger rounded"
-                  disabled={items.length <= 1}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-muted">Qty</label>
+                    <input
+                      type="number" min="1" step="0.01" value={item.quantity}
+                      onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)}
+                      className="w-full px-2 py-1.5 border border-border rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted">Rate ($)</label>
+                    <input
+                      type="number" min="0" step="0.01" value={item.rate}
+                      onChange={(e) => updateItem(index, "rate", parseFloat(e.target.value) || 0)}
+                      className="w-full px-2 py-1.5 border border-border rounded-lg text-sm"
+                    />
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <label className="text-xs text-muted">Amount</label>
+                      <p className="text-sm font-medium py-1.5">${item.amount.toFixed(2)}</p>
+                    </div>
+                    <button onClick={() => removeItem(index)} className="p-1 text-muted hover:text-danger mb-1.5" disabled={items.length <= 1}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -277,19 +301,19 @@ export default function InvoiceForm({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
+        <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6">
           <h2 className="font-semibold mb-4">Notes</h2>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            rows={4}
+            rows={3}
             placeholder="Payment terms, thank you message, etc."
             className="w-full px-3 py-2 border border-border rounded-lg text-sm"
           />
         </div>
 
-        <div className="bg-card-bg rounded-xl border border-border p-6">
+        <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6">
           <h2 className="font-semibold mb-4">Summary</h2>
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
@@ -300,14 +324,8 @@ export default function InvoiceForm({
               <div className="flex items-center gap-2">
                 <span className="text-muted">Tax</span>
                 <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={taxRate}
-                  onChange={(e) =>
-                    setTaxRate(parseFloat(e.target.value) || 0)
-                  }
+                  type="number" min="0" max="100" step="0.1" value={taxRate}
+                  onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
                   className="w-16 px-2 py-1 border border-border rounded text-sm text-center"
                 />
                 <span className="text-muted">%</span>
@@ -322,24 +340,24 @@ export default function InvoiceForm({
         </div>
       </div>
 
-      <div className="flex gap-3 justify-end">
+      <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
         <button
           onClick={() => router.back()}
-          className="px-5 py-2.5 border border-border rounded-lg text-sm hover:bg-gray-50"
+          className="px-5 py-2.5 border border-border rounded-lg text-sm hover:bg-gray-50 order-3 sm:order-1"
         >
           Cancel
         </button>
         <button
           onClick={() => handleSubmit("draft")}
           disabled={saving}
-          className="px-5 py-2.5 border border-border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+          className="px-5 py-2.5 border border-border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 order-2"
         >
           Save as Draft
         </button>
         <button
           onClick={() => handleSubmit("sent")}
           disabled={saving}
-          className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark disabled:opacity-50"
+          className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark disabled:opacity-50 order-1 sm:order-3"
         >
           Save & Mark Sent
         </button>

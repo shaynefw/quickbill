@@ -69,11 +69,11 @@ export default function ClientsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Clients</h1>
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold">Clients</h1>
         <button
           onClick={() => { setEditing(null); setShowForm(true); }}
-          className="px-4 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition flex items-center gap-2"
+          className="px-3 sm:px-4 py-2 sm:py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition flex items-center gap-2 text-sm sm:text-base"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -89,7 +89,7 @@ export default function ClientsPage() {
               {editing ? "Edit Client" : "New Client"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Name *</label>
                   <input
@@ -175,45 +175,82 @@ export default function ClientsPage() {
           <p className="text-sm text-muted">Add your first client to start creating invoices.</p>
         </div>
       ) : (
-        <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border text-left text-sm text-muted">
-                <th className="px-5 py-3 font-medium">Name</th>
-                <th className="px-5 py-3 font-medium">Email</th>
-                <th className="px-5 py-3 font-medium">Company</th>
-                <th className="px-5 py-3 font-medium">Invoices</th>
-                <th className="px-5 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map((client) => (
-                <tr key={client.id} className="border-b border-border last:border-0 hover:bg-background">
-                  <td className="px-5 py-3 font-medium">{client.name}</td>
-                  <td className="px-5 py-3 text-sm text-muted">{client.email}</td>
-                  <td className="px-5 py-3 text-sm text-muted">{client.company || "—"}</td>
-                  <td className="px-5 py-3 text-sm text-muted">{client._count?.invoices || 0}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => { setEditing(client); setShowForm(true); }}
-                        className="text-primary text-sm hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteClient(client.id)}
-                        className="text-danger text-sm hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+        <>
+          {/* Mobile card view */}
+          <div className="space-y-3 md:hidden">
+            {clients.map((client) => (
+              <div key={client.id} className="bg-card-bg rounded-xl border border-border p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-medium">{client.name}</p>
+                    <p className="text-sm text-muted">{client.email}</p>
+                  </div>
+                  <span className="text-xs text-muted bg-gray-100 px-2 py-0.5 rounded">
+                    {client._count?.invoices || 0} invoices
+                  </span>
+                </div>
+                {client.company && (
+                  <p className="text-sm text-muted mb-2">{client.company}</p>
+                )}
+                <div className="flex gap-3 pt-2 border-t border-border">
+                  <button
+                    onClick={() => { setEditing(client); setShowForm(true); }}
+                    className="text-primary text-sm hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteClient(client.id)}
+                    className="text-danger text-sm hover:underline"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden md:block bg-card-bg rounded-xl border border-border overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border text-left text-sm text-muted">
+                  <th className="px-5 py-3 font-medium">Name</th>
+                  <th className="px-5 py-3 font-medium">Email</th>
+                  <th className="px-5 py-3 font-medium">Company</th>
+                  <th className="px-5 py-3 font-medium">Invoices</th>
+                  <th className="px-5 py-3 font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {clients.map((client) => (
+                  <tr key={client.id} className="border-b border-border last:border-0 hover:bg-background">
+                    <td className="px-5 py-3 font-medium">{client.name}</td>
+                    <td className="px-5 py-3 text-sm text-muted">{client.email}</td>
+                    <td className="px-5 py-3 text-sm text-muted">{client.company || "—"}</td>
+                    <td className="px-5 py-3 text-sm text-muted">{client._count?.invoices || 0}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setEditing(client); setShowForm(true); }}
+                          className="text-primary text-sm hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteClient(client.id)}
+                          className="text-danger text-sm hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

@@ -30,16 +30,16 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
           <p className="text-muted text-sm mt-1">
             Welcome back, {user.fullName}
           </p>
         </div>
         <Link
           href="/invoices/new"
-          className="px-4 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition flex items-center gap-2"
+          className="px-4 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition flex items-center justify-center gap-2 w-full sm:w-auto"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-6 sm:mb-8">
         <MetricCard
           label="Total Revenue"
           value={`$${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
@@ -142,14 +142,14 @@ function MetricCard({
   icon: string;
 }) {
   return (
-    <div className="bg-card-bg rounded-xl border border-border p-5">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-muted text-sm font-medium">{label}</span>
-        <svg className={`w-5 h-5 ${color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="bg-card-bg rounded-xl border border-border p-3 sm:p-5">
+      <div className="flex items-center justify-between mb-2 sm:mb-3">
+        <span className="text-muted text-xs sm:text-sm font-medium">{label}</span>
+        <svg className={`w-4 h-4 sm:w-5 sm:h-5 ${color} hidden sm:block`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
         </svg>
       </div>
-      <p className={`text-2xl font-bold ${color}`}>{value}</p>
+      <p className={`text-lg sm:text-2xl font-bold ${color}`}>{value}</p>
     </div>
   );
 }

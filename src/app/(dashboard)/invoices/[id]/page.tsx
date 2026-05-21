@@ -27,9 +27,9 @@ export default async function InvoiceDetailPage({
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">{invoice.invoiceNumber}</h1>
+          <h1 className="text-lg sm:text-2xl font-bold">{invoice.invoiceNumber}</h1>
           <span
             className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
               statusStyles[invoice.status] || statusStyles.draft
@@ -42,10 +42,10 @@ export default async function InvoiceDetailPage({
       </div>
 
       <div
-        className="bg-white rounded-xl border border-border p-8 shadow-sm"
+        className="bg-white rounded-xl border border-border p-4 sm:p-8 shadow-sm overflow-x-auto"
         style={{ "--inv-primary": user.primaryColor } as React.CSSProperties}
       >
-        <div className="flex justify-between items-start mb-8 pb-6 border-b-2" style={{ borderColor: user.primaryColor }}>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b-2" style={{ borderColor: user.primaryColor }}>
           <div>
             {user.logoUrl && (
               <img
@@ -69,9 +69,9 @@ export default async function InvoiceDetailPage({
               </p>
             )}
           </div>
-          <div className="text-right">
+          <div className="sm:text-right">
             <h3
-              className="text-2xl font-bold mb-2"
+              className="text-xl sm:text-2xl font-bold mb-2"
               style={{ color: user.primaryColor }}
             >
               INVOICE

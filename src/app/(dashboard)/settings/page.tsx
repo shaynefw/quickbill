@@ -79,9 +79,9 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
+      <h1 className="text-xl sm:text-2xl font-bold mb-6">Settings</h1>
 
-      <div className="flex gap-1 mb-6 bg-card-bg rounded-lg border border-border p-1">
+      <div className="flex gap-1 mb-6 bg-card-bg rounded-lg border border-border p-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -98,7 +98,7 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === "company" && (
-        <div className="bg-card-bg rounded-xl border border-border p-6 space-y-4">
+        <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Company Name</label>
             <input
@@ -108,7 +108,7 @@ export default function SettingsPage() {
               placeholder="Your Company LLC"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Email</label>
               <input
@@ -149,7 +149,7 @@ export default function SettingsPage() {
       )}
 
       {activeTab === "appearance" && (
-        <div className="bg-card-bg rounded-xl border border-border p-6 space-y-6">
+        <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium mb-2">Company Logo</label>
             <div className="flex items-center gap-4">
@@ -187,7 +187,7 @@ export default function SettingsPage() {
 
           <div>
             <label className="block text-sm font-medium mb-2">Invoice Colors</label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-muted mb-1">Primary Color</label>
                 <div className="flex items-center gap-3">

@@ -35,9 +35,17 @@ export default function SettingsPage() {
   const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"company" | "appearance" | "email" | "presets">("company");
+  const [activeTab, setActiveTab] = useState<"company" | "appearance" | "email" | "presets" | "backup">("company");
   const [showPresetForm, setShowPresetForm] = useState(false);
   const [editingPreset, setEditingPreset] = useState<PresetItem | null>(null);
+  const [backupSections, setBackupSections] = useState({
+    clients: true,
+    invoices: true,
+    presets: true,
+  });
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<Record<string, number> | null>(null);
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then(setSettings);
@@ -123,6 +131,65 @@ export default function SettingsPage() {
     setPresetItems((prev) => prev.filter((p) => p.id !== id));
   }
 
+  async function exportBackup() {
+    setBackupLoading(true);
+    try {
+      const selected = Object.entries(backupSections)
+        .filter(([, v]) => v)
+        .map(([k]) => k);
+      if (selected.length === 0) {
+        alert("Please select at least one section to export.");
+        setBackupLoading(false);
+        return;
+      }
+      const res = await fetch(`/api/backup?sections=${selected.join(",")}`);
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `quickbill-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Failed to export backup");
+    }
+    setBackupLoading(false);
+  }
+
+  async function importBackup(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreLoading(true);
+    setRestoreResult(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const res = await fetch("/api/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.error) {
+        alert(result.error);
+      } else {
+        setRestoreResult(result.imported);
+        // Refresh presets list
+        const presetsRes = await fetch("/api/preset-items");
+        setPresetItems(await presetsRes.json());
+        router.refresh();
+      }
+    } catch {
+      alert("Invalid backup file. Please select a valid QuickBill backup.");
+    }
+    setRestoreLoading(false);
+    // Reset file input
+    e.target.value = "";
+  }
+
   if (!settings) return <p className="text-muted">Loading...</p>;
 
   const tabs = [
@@ -130,6 +197,7 @@ export default function SettingsPage() {
     { id: "appearance" as const, label: "Appearance" },
     { id: "presets" as const, label: "Presets" },
     { id: "email" as const, label: "Email" },
+    { id: "backup" as const, label: "Backup" },
   ];
 
   return (
@@ -495,6 +563,101 @@ export default function SettingsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {activeTab === "backup" && (
+        <div className="space-y-6">
+          {/* Export */}
+          <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <h3 className="font-semibold">Export Backup</h3>
+            </div>
+            <p className="text-sm text-muted mb-4">
+              Download a JSON file with your data. Choose what to include:
+            </p>
+            <div className="space-y-2 mb-5">
+              {[
+                { key: "clients" as const, label: "Clients", desc: "Names, emails, addresses, notes" },
+                { key: "invoices" as const, label: "Invoices", desc: "All invoices with line items" },
+                { key: "presets" as const, label: "Preset Items", desc: "Quick-add line item presets" },
+              ].map((section) => (
+                <label key={section.key} className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={backupSections[section.key]}
+                    onChange={(e) =>
+                      setBackupSections((prev) => ({
+                        ...prev,
+                        [section.key]: e.target.checked,
+                      }))
+                    }
+                    className="mt-0.5 rounded border-border"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{section.label}</p>
+                    <p className="text-xs text-muted">{section.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={exportBackup}
+              disabled={backupLoading}
+              className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              {backupLoading ? "Exporting..." : "Download Backup"}
+            </button>
+          </div>
+
+          {/* Import */}
+          <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <h3 className="font-semibold">Restore from Backup</h3>
+            </div>
+            <p className="text-sm text-muted mb-4">
+              Import data from a QuickBill backup file. Existing records with the same email or invoice number will be skipped (no duplicates).
+            </p>
+            <label className="inline-flex items-center gap-2 px-5 py-2.5 border border-border rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 disabled:opacity-50">
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              {restoreLoading ? "Importing..." : "Upload Backup File"}
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={importBackup}
+                disabled={restoreLoading}
+              />
+            </label>
+
+            {restoreResult && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm font-medium text-green-800 mb-2">Import complete!</p>
+                <ul className="text-sm text-green-700 space-y-1">
+                  {restoreResult.clients !== undefined && (
+                    <li>{restoreResult.clients} new client{restoreResult.clients !== 1 ? "s" : ""} imported</li>
+                  )}
+                  {restoreResult.invoices !== undefined && (
+                    <li>{restoreResult.invoices} new invoice{restoreResult.invoices !== 1 ? "s" : ""} imported</li>
+                  )}
+                  {restoreResult.presets !== undefined && (
+                    <li>{restoreResult.presets} new preset{restoreResult.presets !== 1 ? "s" : ""} imported</li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

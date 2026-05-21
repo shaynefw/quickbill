@@ -62,6 +62,7 @@ model Invoice {
   total          Float     @default(0)
   paidAt         DateTime?
   sentAt         DateTime?
+  shareToken     String?   @unique
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

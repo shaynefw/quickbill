@@ -21,17 +21,28 @@ interface EmailTemplate {
   body: string;
 }
 
+interface PresetItem {
+  id: string;
+  name: string;
+  description: string;
+  rate: number;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"company" | "appearance" | "email">("company");
+  const [activeTab, setActiveTab] = useState<"company" | "appearance" | "email" | "presets">("company");
+  const [showPresetForm, setShowPresetForm] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<PresetItem | null>(null);
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then(setSettings);
     fetch("/api/email-templates").then((r) => r.json()).then(setTemplates);
+    fetch("/api/preset-items").then((r) => r.json()).then(setPresetItems);
   }, []);
 
   async function saveSettings() {
@@ -49,6 +60,12 @@ export default function SettingsPage() {
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 512 * 1024) {
+      alert("Logo must be under 512KB");
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -56,6 +73,8 @@ export default function SettingsPage() {
     const data = await res.json();
     if (data.url) {
       setSettings((prev) => prev ? { ...prev, logoUrl: data.url } : prev);
+    } else if (data.error) {
+      alert(data.error);
     }
     setUploading(false);
   }
@@ -69,12 +88,48 @@ export default function SettingsPage() {
     alert("Template saved!");
   }
 
+  async function handlePresetSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const body = {
+      name: form.get("name") as string,
+      description: form.get("description") as string,
+      rate: parseFloat(form.get("rate") as string) || 0,
+    };
+
+    if (editingPreset) {
+      await fetch(`/api/preset-items/${editingPreset.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } else {
+      await fetch("/api/preset-items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    }
+
+    setShowPresetForm(false);
+    setEditingPreset(null);
+    const res = await fetch("/api/preset-items");
+    setPresetItems(await res.json());
+  }
+
+  async function deletePreset(id: string) {
+    if (!confirm("Delete this preset item?")) return;
+    await fetch(`/api/preset-items/${id}`, { method: "DELETE" });
+    setPresetItems((prev) => prev.filter((p) => p.id !== id));
+  }
+
   if (!settings) return <p className="text-muted">Loading...</p>;
 
   const tabs = [
-    { id: "company" as const, label: "Company Info" },
+    { id: "company" as const, label: "Company" },
     { id: "appearance" as const, label: "Appearance" },
-    { id: "email" as const, label: "Email Templates" },
+    { id: "presets" as const, label: "Presets" },
+    { id: "email" as const, label: "Email" },
   ];
 
   return (
@@ -86,7 +141,7 @@ export default function SettingsPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition ${
+            className={`flex-1 px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition whitespace-nowrap ${
               activeTab === tab.id
                 ? "bg-primary text-white"
                 : "text-muted hover:bg-gray-100"
@@ -183,6 +238,7 @@ export default function SettingsPage() {
                 />
               </label>
             </div>
+            <p className="text-xs text-muted mt-2">Max 512KB. PNG, JPEG, GIF, WebP, or SVG.</p>
           </div>
 
           <div>
@@ -258,6 +314,130 @@ export default function SettingsPage() {
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
+        </div>
+      )}
+
+      {activeTab === "presets" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted">
+              Create preset line items to quickly add to invoices.
+            </p>
+            <button
+              onClick={() => { setEditingPreset(null); setShowPresetForm(true); }}
+              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Preset
+            </button>
+          </div>
+
+          {showPresetForm && (
+            <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6">
+              <h3 className="font-semibold mb-4">
+                {editingPreset ? "Edit Preset Item" : "New Preset Item"}
+              </h3>
+              <form onSubmit={handlePresetSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Name *</label>
+                    <input
+                      name="name"
+                      required
+                      defaultValue={editingPreset?.name}
+                      placeholder="e.g. Web Design"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Rate ($) *</label>
+                    <input
+                      name="rate"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      defaultValue={editingPreset?.rate}
+                      placeholder="150.00"
+                      className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description *</label>
+                  <input
+                    name="description"
+                    required
+                    defaultValue={editingPreset?.description}
+                    placeholder="e.g. Custom website design and development"
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => { setShowPresetForm(false); setEditingPreset(null); }}
+                    className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark"
+                  >
+                    {editingPreset ? "Update" : "Create"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {presetItems.length === 0 && !showPresetForm ? (
+            <div className="bg-card-bg rounded-xl border border-border p-12 text-center">
+              <svg className="w-12 h-12 text-muted mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <p className="text-muted mb-2">No preset items yet</p>
+              <p className="text-sm text-muted">Add preset items to quickly fill invoices.</p>
+            </div>
+          ) : (
+            <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
+              {presetItems.map((preset, i) => (
+                <div
+                  key={preset.id}
+                  className={`flex items-center justify-between p-4 ${
+                    i < presetItems.length - 1 ? "border-b border-border" : ""
+                  }`}
+                >
+                  <div>
+                    <p className="font-medium">{preset.name}</p>
+                    <p className="text-sm text-muted">{preset.description}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-sm font-medium">
+                      ${preset.rate.toFixed(2)}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setEditingPreset(preset); setShowPresetForm(true); }}
+                        className="text-primary text-sm hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deletePreset(preset.id)}
+                        className="text-danger text-sm hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

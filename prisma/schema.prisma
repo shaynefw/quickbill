@@ -27,6 +27,7 @@ model User {
   clients        Client[]
   invoices       Invoice[]
   emailTemplates EmailTemplate[]
+  presetItems    PresetItem[]
 }
 
 model Client {
@@ -46,20 +47,23 @@ model Client {
 }
 
 model Invoice {
-  id            String    @id @default(uuid())
-  invoiceNumber String
-  status        String    @default("draft")
-  issueDate     DateTime  @default(now())
-  dueDate       DateTime
-  notes         String    @default("")
-  subtotal      Float     @default(0)
-  taxRate       Float     @default(0)
-  taxAmount     Float     @default(0)
-  total         Float     @default(0)
-  paidAt        DateTime?
-  sentAt        DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(uuid())
+  invoiceNumber  String
+  status         String    @default("draft")
+  issueDate      DateTime  @default(now())
+  dueDate        DateTime
+  notes          String    @default("")
+  subtotal       Float     @default(0)
+  discountType   String    @default("none")  // "none", "percentage", "fixed"
+  discountValue  Float     @default(0)
+  discountAmount Float     @default(0)
+  taxRate        Float     @default(0)
+  taxAmount      Float     @default(0)
+  total          Float     @default(0)
+  paidAt         DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   userId   String
   user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -85,6 +89,18 @@ model EmailTemplate {
   subject String
   body    String
   type    String @default("invoice")
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PresetItem {
+  id          String @id @default(uuid())
+  name        String
+  description String
+  rate        Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

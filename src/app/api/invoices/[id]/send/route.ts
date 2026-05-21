@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 export async function POST(
   _request: Request,
@@ -10,13 +10,9 @@ export async function POST(
   const user = await requireUser();
   const { id } = await params;
 
-  if (
-    !process.env.SMTP_HOST ||
-    !process.env.SMTP_USER ||
-    !process.env.SMTP_PASS
-  ) {
+  if (!process.env.RESEND_API_KEY) {
     return NextResponse.json(
-      { error: "SMTP not configured. Go to Settings to set up email." },
+      { error: "Email service not configured. Add RESEND_API_KEY to environment variables." },
       { status: 400 }
     );
   }
@@ -55,23 +51,21 @@ export async function POST(
     }
   }
 
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_PORT === "465",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: invoice.client.email,
-    subject,
-    text: body,
-    html: body.replace(/\n/g, "<br>"),
-  });
+  try {
+    await resend.emails.send({
+      from: `${companyName} <${fromEmail}>`,
+      to: [invoice.client.email],
+      subject,
+      text: body,
+      html: body.replace(/\n/g, "<br>"),
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to send email";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
   await prisma.invoice.updateMany({
     where: { id, userId: user.id },

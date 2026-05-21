@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 interface Client {
   id: string;
   name: string;
   email: string;
+}
+
+interface PresetItem {
+  id: string;
+  name: string;
+  description: string;
+  rate: number;
 }
 
 interface LineItem {
@@ -24,6 +31,8 @@ interface InvoiceData {
   issueDate: string;
   dueDate: string;
   taxRate: number;
+  discountType?: string;
+  discountValue?: number;
   notes: string;
   items: LineItem[];
 }
@@ -35,7 +44,10 @@ export default function InvoiceForm({
 }) {
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
+  const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
+  const saveMenuRef = useRef<HTMLDivElement>(null);
   const [clientId, setClientId] = useState(initialData?.clientId || "");
   const [invoiceNumber, setInvoiceNumber] = useState(
     initialData?.invoiceNumber || ""
@@ -48,6 +60,12 @@ export default function InvoiceForm({
       new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]
   );
   const [taxRate, setTaxRate] = useState(initialData?.taxRate || 0);
+  const [discountType, setDiscountType] = useState(
+    initialData?.discountType || "none"
+  );
+  const [discountValue, setDiscountValue] = useState(
+    initialData?.discountValue || 0
+  );
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [items, setItems] = useState<LineItem[]>(
     initialData?.items?.length
@@ -59,6 +77,9 @@ export default function InvoiceForm({
     fetch("/api/clients")
       .then((r) => r.json())
       .then(setClients);
+    fetch("/api/preset-items")
+      .then((r) => r.json())
+      .then(setPresetItems);
   }, []);
 
   useEffect(() => {
@@ -67,6 +88,17 @@ export default function InvoiceForm({
       setInvoiceNumber(num);
     }
   }, [initialData, invoiceNumber]);
+
+  // Close save menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (saveMenuRef.current && !saveMenuRef.current.contains(e.target as Node)) {
+        setShowSaveMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   function updateItem(index: number, field: string, value: string | number) {
     setItems((prev) => {
@@ -91,14 +123,34 @@ export default function InvoiceForm({
     ]);
   }
 
+  function addPresetItem(preset: PresetItem) {
+    setItems((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        description: preset.description,
+        quantity: 1,
+        rate: preset.rate,
+        amount: preset.rate,
+      },
+    ]);
+  }
+
   function removeItem(index: number) {
     if (items.length <= 1) return;
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
   const subtotal = items.reduce((sum, i) => sum + i.amount, 0);
-  const taxAmount = subtotal * (taxRate / 100);
-  const total = subtotal + taxAmount;
+  const discountAmount =
+    discountType === "percentage"
+      ? subtotal * (discountValue / 100)
+      : discountType === "fixed"
+      ? Math.min(discountValue, subtotal)
+      : 0;
+  const afterDiscount = subtotal - discountAmount;
+  const taxAmount = afterDiscount * (taxRate / 100);
+  const total = afterDiscount + taxAmount;
 
   async function handleSubmit(status: string) {
     if (!clientId) {
@@ -111,12 +163,16 @@ export default function InvoiceForm({
     }
 
     setSaving(true);
+    setShowSaveMenu(false);
     const body = {
       invoiceNumber,
       clientId,
       issueDate,
       dueDate,
       taxRate,
+      discountType,
+      discountValue,
+      discountAmount,
       notes,
       status,
       items: items.map((i) => ({
@@ -204,7 +260,36 @@ export default function InvoiceForm({
       </div>
 
       <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6 mb-6">
-        <h2 className="font-semibold mb-4">Line Items</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold">Line Items</h2>
+          {presetItems.length > 0 && (
+            <div className="relative group">
+              <button className="text-sm text-primary hover:underline flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Quick Add
+              </button>
+              <div className="absolute right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-10 min-w-[220px] hidden group-hover:block">
+                {presetItems.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => addPresetItem(preset)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm border-b border-border last:border-0 flex justify-between items-center gap-4"
+                  >
+                    <div>
+                      <p className="font-medium">{preset.name}</p>
+                      <p className="text-xs text-muted">{preset.description}</p>
+                    </div>
+                    <span className="text-xs font-mono text-muted whitespace-nowrap">
+                      ${preset.rate.toFixed(2)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         <div className="space-y-3">
           {/* Desktop header */}
           <div className="hidden sm:grid grid-cols-12 gap-3 text-xs font-medium text-muted px-1">
@@ -320,6 +405,41 @@ export default function InvoiceForm({
               <span className="text-muted">Subtotal</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
+
+            {/* Discount */}
+            <div className="flex items-center justify-between text-sm gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-muted shrink-0">Discount</span>
+                <select
+                  value={discountType}
+                  onChange={(e) => {
+                    setDiscountType(e.target.value);
+                    if (e.target.value === "none") setDiscountValue(0);
+                  }}
+                  className="px-2 py-1 border border-border rounded text-xs bg-white"
+                >
+                  <option value="none">None</option>
+                  <option value="percentage">%</option>
+                  <option value="fixed">$</option>
+                </select>
+                {discountType !== "none" && (
+                  <input
+                    type="number"
+                    min="0"
+                    max={discountType === "percentage" ? 100 : undefined}
+                    step="0.01"
+                    value={discountValue}
+                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
+                    className="w-16 px-2 py-1 border border-border rounded text-sm text-center"
+                  />
+                )}
+              </div>
+              {discountAmount > 0 && (
+                <span className="text-danger shrink-0">-${discountAmount.toFixed(2)}</span>
+              )}
+            </div>
+
+            {/* Tax */}
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <span className="text-muted">Tax</span>
@@ -332,6 +452,7 @@ export default function InvoiceForm({
               </div>
               <span>${taxAmount.toFixed(2)}</span>
             </div>
+
             <div className="border-t border-border pt-3 flex justify-between font-bold text-lg">
               <span>Total</span>
               <span>${total.toFixed(2)}</span>
@@ -347,20 +468,46 @@ export default function InvoiceForm({
         >
           Cancel
         </button>
-        <button
-          onClick={() => handleSubmit("draft")}
-          disabled={saving}
-          className="px-5 py-2.5 border border-border rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 order-2"
-        >
-          Save as Draft
-        </button>
-        <button
-          onClick={() => handleSubmit("sent")}
-          disabled={saving}
-          className="px-5 py-2.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark disabled:opacity-50 order-1 sm:order-3"
-        >
-          Save & Mark Sent
-        </button>
+
+        {/* Save action dropdown */}
+        <div className="relative order-1 sm:order-3" ref={saveMenuRef}>
+          <div className="flex">
+            <button
+              onClick={() => handleSubmit("draft")}
+              disabled={saving}
+              className="flex-1 sm:flex-none px-5 py-2.5 bg-primary text-white rounded-l-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Invoice"}
+            </button>
+            <button
+              onClick={() => setShowSaveMenu(!showSaveMenu)}
+              disabled={saving}
+              className="px-2.5 py-2.5 bg-primary text-white rounded-r-lg text-sm hover:bg-primary-dark disabled:opacity-50 border-l border-white/20"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+          {showSaveMenu && (
+            <div className="absolute right-0 bottom-full mb-1 bg-white border border-border rounded-lg shadow-lg z-10 min-w-[200px]">
+              <button
+                onClick={() => handleSubmit("draft")}
+                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm rounded-t-lg"
+              >
+                <span className="font-medium">Save as Draft</span>
+                <p className="text-xs text-muted">Save without sending</p>
+              </button>
+              <button
+                onClick={() => handleSubmit("sent")}
+                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm border-t border-border rounded-b-lg"
+              >
+                <span className="font-medium">Save & Mark Sent</span>
+                <p className="text-xs text-muted">Save and mark as sent</p>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

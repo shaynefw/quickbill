@@ -22,6 +22,9 @@ export async function PUT(
       taxRate: data.taxRate,
       notes: data.notes || "",
       subtotal: data.subtotal,
+      discountType: data.discountType || "none",
+      discountValue: data.discountValue || 0,
+      discountAmount: data.discountAmount || 0,
       taxAmount: data.taxAmount,
       total: data.total,
       status: data.status || "draft",
@@ -59,6 +62,10 @@ export async function PATCH(
   const updateData: Record<string, unknown> = { status: data.status };
   if (data.status === "paid") updateData.paidAt = new Date();
   if (data.status === "sent") updateData.sentAt = new Date();
+  // When undoing paid, clear paidAt
+  if (data.status === "sent" && data.undoPaid) {
+    updateData.paidAt = null;
+  }
 
   await prisma.invoice.updateMany({
     where: { id, userId: user.id },

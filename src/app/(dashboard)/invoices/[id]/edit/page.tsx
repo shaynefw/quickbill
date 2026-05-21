@@ -25,6 +25,8 @@ export default async function EditInvoicePage({
     issueDate: new Date(invoice.issueDate).toISOString().split("T")[0],
     dueDate: new Date(invoice.dueDate).toISOString().split("T")[0],
     taxRate: invoice.taxRate,
+    discountType: invoice.discountType,
+    discountValue: invoice.discountValue,
     notes: invoice.notes,
     items: invoice.items.map((item) => ({
       id: item.id,

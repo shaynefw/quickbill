@@ -149,6 +149,19 @@ export default async function InvoiceDetailPage({
               <span className="text-muted">Subtotal</span>
               <span>${invoice.subtotal.toFixed(2)}</span>
             </div>
+            {invoice.discountType !== "none" && invoice.discountAmount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted">
+                  Discount
+                  {invoice.discountType === "percentage"
+                    ? ` (${invoice.discountValue}%)`
+                    : ""}
+                </span>
+                <span className="text-red-500">
+                  -${invoice.discountAmount.toFixed(2)}
+                </span>
+              </div>
+            )}
             {invoice.taxRate > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted">Tax ({invoice.taxRate}%)</span>

@@ -42,6 +42,7 @@ export default function SettingsPage() {
     clients: true,
     invoices: true,
     presets: true,
+    appointments: true,
   });
   const [backupLoading, setBackupLoading] = useState(false);
   const [restoreLoading, setRestoreLoading] = useState(false);
@@ -584,6 +585,7 @@ export default function SettingsPage() {
                 { key: "clients" as const, label: "Clients", desc: "Names, emails, addresses, notes" },
                 { key: "invoices" as const, label: "Invoices", desc: "All invoices with line items" },
                 { key: "presets" as const, label: "Preset Items", desc: "Quick-add line item presets" },
+                { key: "appointments" as const, label: "Appointments", desc: "Calendar appointments and schedule" },
               ].map((section) => (
                 <label key={section.key} className="flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-gray-50 cursor-pointer">
                   <input
@@ -653,6 +655,9 @@ export default function SettingsPage() {
                   )}
                   {restoreResult.presets !== undefined && (
                     <li>{restoreResult.presets} new preset{restoreResult.presets !== 1 ? "s" : ""} imported</li>
+                  )}
+                  {restoreResult.appointments !== undefined && (
+                    <li>{restoreResult.appointments} new appointment{restoreResult.appointments !== 1 ? "s" : ""} imported</li>
                   )}
                 </ul>
               </div>

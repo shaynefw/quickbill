@@ -28,6 +28,7 @@ model User {
   invoices       Invoice[]
   emailTemplates EmailTemplate[]
   presetItems    PresetItem[]
+  appointments   Appointment[]
 }
 
 model Client {
@@ -41,9 +42,10 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  userId   String
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invoices Invoice[]
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices     Invoice[]
+  appointments Appointment[]
 }
 
 model Invoice {
@@ -105,4 +107,21 @@ model PresetItem {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @default("")
+  startTime   DateTime
+  endTime     DateTime?
+  location    String   @default("")
+  status      String   @default("scheduled")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 }

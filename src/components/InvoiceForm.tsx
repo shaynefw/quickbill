@@ -58,9 +58,28 @@ export default function InvoiceForm({
     initialData?.issueDate || new Date().toISOString().split("T")[0]
   );
   const [dueDate, setDueDate] = useState(
-    initialData?.dueDate ||
-      new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]
+    initialData?.dueDate || new Date().toISOString().split("T")[0]
   );
+  const [duePreset, setDuePreset] = useState<string>(() => {
+    if (!initialData?.dueDate) return "receipt";
+    const issue = new Date(initialData.issueDate || new Date().toISOString());
+    const due = new Date(initialData.dueDate);
+    const diff = Math.round((due.getTime() - issue.getTime()) / 86400000);
+    if (diff === 0) return "receipt";
+    if (diff === 7) return "net7";
+    if (diff === 14) return "net14";
+    if (diff === 30) return "net30";
+    return "custom";
+  });
+
+  function applyDuePreset(preset: string, baseIssue: string = issueDate) {
+    setDuePreset(preset);
+    const base = new Date(baseIssue);
+    if (preset === "receipt") setDueDate(baseIssue);
+    else if (preset === "net7") setDueDate(new Date(base.getTime() + 7 * 86400000).toISOString().split("T")[0]);
+    else if (preset === "net14") setDueDate(new Date(base.getTime() + 14 * 86400000).toISOString().split("T")[0]);
+    else if (preset === "net30") setDueDate(new Date(base.getTime() + 30 * 86400000).toISOString().split("T")[0]);
+  }
   const [taxRate, setTaxRate] = useState(initialData?.taxRate || 0);
   const [discountType, setDiscountType] = useState(
     initialData?.discountType || "none"
@@ -248,16 +267,33 @@ export default function InvoiceForm({
             <input
               type="date"
               value={issueDate}
-              onChange={(e) => setIssueDate(e.target.value)}
+              onChange={(e) => {
+                setIssueDate(e.target.value);
+                if (duePreset !== "custom") applyDuePreset(duePreset, e.target.value);
+              }}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Due Date</label>
+            <label className="block text-sm font-medium mb-1">Payment Terms</label>
+            <select
+              value={duePreset}
+              onChange={(e) => applyDuePreset(e.target.value)}
+              className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-white mb-2"
+            >
+              <option value="receipt">Due upon receipt</option>
+              <option value="net7">Net 7 (due in 7 days)</option>
+              <option value="net14">Net 14 (due in 14 days)</option>
+              <option value="net30">Net 30 (due in 30 days)</option>
+              <option value="custom">Custom date</option>
+            </select>
             <input
               type="date"
               value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              onChange={(e) => {
+                setDueDate(e.target.value);
+                setDuePreset("custom");
+              }}
               className="w-full px-3 py-2 border border-border rounded-lg text-sm"
             />
           </div>

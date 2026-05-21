@@ -90,7 +90,7 @@ export default function InvoiceActions({
 
       window.open(
         `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
-        "_self"
+        "_blank"
       );
     } catch {
       // Fallback to basic mailto
@@ -99,7 +99,56 @@ export default function InvoiceActions({
       const body = encodeURIComponent(
         `Hi,\n\nPlease find invoice ${invoiceNumber || ""}.\n\nThank you!`
       );
-      window.open(`mailto:${to}?subject=${subject}&body=${body}`, "_self");
+      window.open(`mailto:${to}?subject=${subject}&body=${body}`, "_blank");
+    }
+  }
+
+  async function sendReceiptEmail() {
+    setOpen(false);
+    try {
+      const [pdfRes, tmplRes] = await Promise.all([
+        fetch(`/api/invoices/${invoiceId}/pdf`),
+        fetch("/api/email-templates"),
+      ]);
+      const { invoice: invData, user: userData } = await pdfRes.json();
+      const templates = await tmplRes.json();
+      const receiptTemplate = templates.find(
+        (t: { type: string }) => t.type === "receipt"
+      );
+
+      const to = clientEmail || "";
+      const totalFormatted = `$${Number(invData.total).toFixed(2)}`;
+      const dueDateFormatted = new Date(invData.dueDate).toLocaleDateString();
+
+      let subject: string;
+      let body: string;
+
+      if (receiptTemplate) {
+        const replacePlaceholders = (text: string) =>
+          text
+            .replace(/\{\{invoiceNumber\}\}/g, invData.invoiceNumber || "")
+            .replace(/\{\{clientName\}\}/g, invData.client?.name || "")
+            .replace(/\{\{total\}\}/g, totalFormatted)
+            .replace(/\{\{dueDate\}\}/g, dueDateFormatted)
+            .replace(/\{\{companyName\}\}/g, userData.companyName || "");
+        subject = replacePlaceholders(receiptTemplate.subject);
+        body = replacePlaceholders(receiptTemplate.body);
+      } else {
+        subject = `Payment Receipt - Invoice ${invoiceNumber || ""}`;
+        body = `Hi,\n\nThank you for your payment of ${totalFormatted} for invoice ${invoiceNumber || ""}.\n\nThis confirms that your payment has been received.\n\nBest regards,\n${userData.companyName || ""}`;
+      }
+
+      window.open(
+        `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+        "_blank"
+      );
+    } catch {
+      const to = clientEmail || "";
+      const subject = encodeURIComponent(`Payment Receipt - Invoice ${invoiceNumber || ""}`);
+      const body = encodeURIComponent(
+        `Hi,\n\nThank you for your payment for invoice ${invoiceNumber || ""}.\n\nBest regards`
+      );
+      window.open(`mailto:${to}?subject=${subject}&body=${body}`, "_blank");
     }
   }
 
@@ -148,7 +197,7 @@ export default function InvoiceActions({
       : status === "sent"
       ? { label: "Mark as Paid", onClick: markPaid, color: "bg-green-600 hover:bg-green-700 text-white" }
       : status === "paid"
-      ? { label: "Undo Payment", onClick: undoPaid, color: "bg-amber-500 hover:bg-amber-600 text-white" }
+      ? { label: "Send Receipt", onClick: sendReceiptEmail, color: "bg-green-600 hover:bg-green-700 text-white" }
       : null;
 
   return (
@@ -211,6 +260,21 @@ export default function InvoiceActions({
                   </svg>
                   Edit Invoice
                 </Link>
+              </>
+            )}
+
+            {status === "paid" && (
+              <>
+                <div className="border-t border-border my-1" />
+                <button
+                  onClick={undoPaid}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-3"
+                >
+                  <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  Undo Payment
+                </button>
               </>
             )}
 

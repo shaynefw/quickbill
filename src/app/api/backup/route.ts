@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     "clients",
     "invoices",
     "presets",
+    "appointments",
   ];
 
   const backup: Record<string, unknown> = {
@@ -72,6 +73,22 @@ export async function GET(request: Request) {
         rate: true,
       },
     });
+  }
+
+  if (sections.includes("appointments")) {
+    const appts = await prisma.appointment.findMany({
+      where: { userId: user.id },
+      include: { client: { select: { email: true } } },
+    });
+    backup.appointments = appts.map((a) => ({
+      title: a.title,
+      description: a.description,
+      startTime: a.startTime.toISOString(),
+      endTime: a.endTime?.toISOString() || null,
+      location: a.location,
+      status: a.status,
+      clientEmail: a.client?.email || null,
+    }));
   }
 
   return NextResponse.json(backup);
@@ -202,6 +219,45 @@ export async function POST(request: Request) {
       }
     }
     results.presets = imported;
+  }
+
+  // Import appointments
+  if (backup.appointments && Array.isArray(backup.appointments)) {
+    let imported = 0;
+    for (const appt of backup.appointments) {
+      // Skip duplicates by title + startTime
+      const existing = await prisma.appointment.findFirst({
+        where: {
+          userId: user.id,
+          title: appt.title,
+          startTime: new Date(appt.startTime),
+        },
+      });
+      if (existing) continue;
+
+      let clientId: string | null = null;
+      if (appt.clientEmail) {
+        const client = await prisma.client.findFirst({
+          where: { userId: user.id, email: appt.clientEmail },
+        });
+        clientId = client?.id || null;
+      }
+
+      await prisma.appointment.create({
+        data: {
+          userId: user.id,
+          title: appt.title || "",
+          description: appt.description || "",
+          startTime: new Date(appt.startTime),
+          endTime: appt.endTime ? new Date(appt.endTime) : null,
+          location: appt.location || "",
+          status: appt.status || "scheduled",
+          clientId,
+        },
+      });
+      imported++;
+    }
+    results.appointments = imported;
   }
 
   return NextResponse.json({ success: true, imported: results });

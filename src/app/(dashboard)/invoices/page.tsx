@@ -78,7 +78,7 @@ export default async function InvoicesPage() {
           </div>
 
           {/* Desktop table view */}
-          <div className="hidden md:block bg-card-bg rounded-xl border border-border">
+          <div className="hidden md:block bg-card-bg rounded-xl border border-border overflow-visible">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border text-left text-sm text-muted">

@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  fullName     String
+  email        String   @default("")
+  companyName  String   @default("")
+  companyEmail String   @default("")
+  companyPhone String   @default("")
+  companyAddress String @default("")
+  logoUrl      String   @default("")
+  primaryColor String   @default("#2563eb")
+  accentColor  String   @default("#1e40af")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clients      Client[]
+  invoices     Invoice[]
+  emailTemplates EmailTemplate[]
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String   @default("")
+  address   String   @default("")
+  company   String   @default("")
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  invoiceNumber String
+  status        String   @default("draft")
+  issueDate     DateTime @default(now())
+  dueDate       DateTime
+  notes         String   @default("")
+  subtotal      Float    @default(0)
+  taxRate       Float    @default(0)
+  taxAmount     Float    @default(0)
+  total         Float    @default(0)
+  paidAt        DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id])
+  items    InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String @id @default(uuid())
+  description String
+  quantity    Float
+  rate        Float
+  amount      Float
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model EmailTemplate {
+  id       String @id @default(uuid())
+  name     String
+  subject  String
+  body     String
+  type     String @default("invoice")
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

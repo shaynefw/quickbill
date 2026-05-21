@@ -45,16 +45,62 @@ export default function InvoiceActions({
     setDownloading(false);
   }
 
-  function openEmail() {
+  async function openEmail() {
     setOpen(false);
-    const to = clientEmail || "";
-    const subject = encodeURIComponent(
-      `Invoice ${invoiceNumber || ""}`
-    );
-    const body = encodeURIComponent(
-      `Hi,\n\nPlease find attached invoice ${invoiceNumber || ""}.\n\nThank you!`
-    );
-    window.open(`mailto:${to}?subject=${subject}&body=${body}`, "_self");
+    try {
+      // Fetch invoice data, share link, and email templates in parallel
+      const [pdfRes, shareRes, tmplRes] = await Promise.all([
+        fetch(`/api/invoices/${invoiceId}/pdf`),
+        fetch(`/api/invoices/${invoiceId}/share`, { method: "POST" }),
+        fetch("/api/email-templates"),
+      ]);
+
+      const { invoice: invData, user: userData } = await pdfRes.json();
+      const { token } = await shareRes.json();
+      const templates = await tmplRes.json();
+      const shareUrl = `${window.location.origin}/share/${token}`;
+
+      const invoiceTemplate = templates.find(
+        (t: { type: string }) => t.type === "invoice"
+      );
+
+      const to = clientEmail || "";
+      const totalFormatted = `$${Number(invData.total).toFixed(2)}`;
+      const dueDateFormatted = new Date(invData.dueDate).toLocaleDateString();
+
+      let subject: string;
+      let body: string;
+
+      if (invoiceTemplate) {
+        const replacePlaceholders = (text: string) =>
+          text
+            .replace(/\{\{invoiceNumber\}\}/g, invData.invoiceNumber || "")
+            .replace(/\{\{clientName\}\}/g, invData.client?.name || "")
+            .replace(/\{\{total\}\}/g, totalFormatted)
+            .replace(/\{\{dueDate\}\}/g, dueDateFormatted)
+            .replace(/\{\{companyName\}\}/g, userData.companyName || "");
+
+        subject = replacePlaceholders(invoiceTemplate.subject);
+        body = replacePlaceholders(invoiceTemplate.body);
+        body += `\n\nView & download your invoice here:\n${shareUrl}`;
+      } else {
+        subject = `Invoice ${invoiceNumber || ""}`;
+        body = `Hi,\n\nPlease find invoice ${invoiceNumber || ""} for ${totalFormatted}.\n\nDue date: ${dueDateFormatted}\n\nView & download your invoice here:\n${shareUrl}\n\nThank you!`;
+      }
+
+      window.open(
+        `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+        "_self"
+      );
+    } catch {
+      // Fallback to basic mailto
+      const to = clientEmail || "";
+      const subject = encodeURIComponent(`Invoice ${invoiceNumber || ""}`);
+      const body = encodeURIComponent(
+        `Hi,\n\nPlease find invoice ${invoiceNumber || ""}.\n\nThank you!`
+      );
+      window.open(`mailto:${to}?subject=${subject}&body=${body}`, "_self");
+    }
   }
 
   async function markSent() {

@@ -63,7 +63,7 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
   if (user.logoUrl && user.logoUrl.startsWith("data:image")) {
     try {
       doc.addImage(user.logoUrl, "PNG", margin, yPos, 32, 16);
-      yPos += 20;
+      yPos += 24;
     } catch {
       // Skip logo if it fails
     }

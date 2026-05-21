@@ -15,7 +15,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "QuickBill - Invoice Management",
-  description: "Create and send professional invoices quickly",
+  description: "Create and send professional invoices in minutes. Build, customize, and send branded invoices with ease.",
+  openGraph: {
+    title: "QuickBill - Invoice Management",
+    description: "Create and send professional invoices in minutes. Build, customize, and send branded invoices with ease.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "QuickBill - Invoice Management",
+    description: "Create and send professional invoices in minutes.",
+  },
 };
 
 export default function RootLayout({

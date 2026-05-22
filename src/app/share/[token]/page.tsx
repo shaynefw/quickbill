@@ -70,8 +70,35 @@ export default async function ShareInvoicePage({
 
         {/* Invoice preview */}
         <div
-          className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 shadow-sm"
+          className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 shadow-sm relative overflow-hidden"
         >
+          {/* PAID stamp watermark overlay */}
+          {invoice.status === "paid" && (
+            <div
+              className="absolute pointer-events-none select-none"
+              style={{
+                top: "40%",
+                left: "55%",
+                transform: "translate(-50%, -50%) rotate(-18deg)",
+                opacity: 0.45,
+                zIndex: 10,
+              }}
+            >
+              <div
+                className="border-[6px] border-double border-green-600 rounded-md px-8 py-3 sm:px-12 sm:py-4"
+                style={{ boxShadow: "0 0 0 3px rgba(22, 163, 74, 0.15)" }}
+              >
+                <div className="text-green-600 font-extrabold tracking-[0.25em] text-5xl sm:text-7xl leading-none">
+                  PAID
+                </div>
+                {invoice.paidAt && (
+                  <div className="text-center text-green-700 font-semibold text-xs sm:text-sm tracking-widest mt-1">
+                    {new Date(invoice.paidAt).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8 pb-6 border-b-2" style={{ borderColor: userData.primaryColor }}>
             <div>
               {userData.logoUrl && (
@@ -96,20 +123,10 @@ export default async function ShareInvoicePage({
                 </p>
               )}
             </div>
-            <div className="sm:text-right relative">
+            <div className="sm:text-right">
               <h3 className="text-2xl font-bold mb-2" style={{ color: userData.primaryColor }}>
                 INVOICE
               </h3>
-              {invoice.status === "paid" && (
-                <div className="inline-block sm:absolute sm:-top-2 sm:right-0 mb-2 px-4 py-1.5 border-4 border-green-600 text-green-600 font-bold text-xl tracking-widest rounded-md transform sm:rotate-[-8deg] bg-white/90">
-                  PAID
-                  {invoice.paidAt && (
-                    <div className="text-[10px] font-normal tracking-normal text-green-700 mt-0.5">
-                      {new Date(invoice.paidAt).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              )}
               <p className="text-sm">
                 <span className="text-gray-500">Invoice #:</span>{" "}
                 {invoice.invoiceNumber}

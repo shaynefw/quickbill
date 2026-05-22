@@ -131,45 +131,8 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
   doc.setTextColor(15, 23, 42);
   doc.text(new Date(invoice.dueDate).toLocaleDateString(), metaX, rightY, { align: "right" });
 
-  // PAID stamp (rotated, overlay)
-  if (invoice.status === "paid") {
-    const stampX = pageWidth - margin - 50;
-    const stampY = leftStartY + 30;
-    doc.saveGraphicsState();
-    // Rotate around stamp center
-    const angle = -15;
-    const rad = (angle * Math.PI) / 180;
-    doc.setDrawColor(22, 163, 74);
-    doc.setTextColor(22, 163, 74);
-    doc.setLineWidth(1.5);
-    // Draw rotated text and rectangle using transformation matrix
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-    // jsPDF rotation: use text with angle, rect manually
-    doc.setFontSize(28);
-    doc.setFont("helvetica", "bold");
-    doc.text("PAID", stampX, stampY, { angle, align: "center" });
-    // Draw rotated rectangle around it
-    const w = 42, h = 16;
-    const cx = stampX, cy = stampY - 6;
-    const corners = [
-      { x: -w / 2, y: -h / 2 },
-      { x: w / 2, y: -h / 2 },
-      { x: w / 2, y: h / 2 },
-      { x: -w / 2, y: h / 2 },
-    ].map((p) => ({ x: cx + p.x * cos - p.y * sin, y: cy + p.x * sin + p.y * cos }));
-    doc.line(corners[0].x, corners[0].y, corners[1].x, corners[1].y);
-    doc.line(corners[1].x, corners[1].y, corners[2].x, corners[2].y);
-    doc.line(corners[2].x, corners[2].y, corners[3].x, corners[3].y);
-    doc.line(corners[3].x, corners[3].y, corners[0].x, corners[0].y);
-    if (invoice.paidAt) {
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "normal");
-      doc.text(new Date(invoice.paidAt).toLocaleDateString(), stampX, stampY + 3, { angle, align: "center" });
-    }
-    doc.restoreGraphicsState();
-    doc.setFont("helvetica", "normal");
-  }
+  // PAID stamp will be drawn as a watermark overlay AFTER the main content
+  // (deferred to end of function so it appears on top of all content)
 
   // Divider line — use the taller of the two columns
   yPos = Math.max(leftEndY, rightY) + 10;
@@ -313,6 +276,46 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
     doc.setTextColor(100, 116, 139);
     const noteLines = doc.splitTextToSize(invoice.notes, pageWidth - margin * 2);
     doc.text(noteLines, margin, yPos);
+  }
+
+  // PAID stamp overlay (drawn last so it sits on top)
+  if (invoice.status === "paid") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx: any = (doc as any).context2d;
+    if (ctx) {
+      const cx = pageWidth / 2 + 30;
+      const cy = 120;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(-0.26); // ~-15 degrees in radians
+      // Semi-transparent green
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = "#16a34a";
+      ctx.fillStyle = "#16a34a";
+      ctx.lineWidth = 2.5;
+      // Outer box
+      const w = 90, h = 36;
+      ctx.strokeRect(-w / 2, -h / 2, w, h);
+      // Inner box
+      const iw = 86, ih = 32;
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(-iw / 2, -ih / 2, iw, ih);
+      // PAID text
+      ctx.font = "bold 48px helvetica";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("PAID", 0, -2);
+      // Paid date
+      if (invoice.paidAt) {
+        ctx.font = "10px helvetica";
+        ctx.fillText(
+          new Date(invoice.paidAt).toLocaleDateString(),
+          0,
+          14
+        );
+      }
+      ctx.restore();
+    }
   }
 
   return doc;

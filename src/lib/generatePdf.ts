@@ -123,13 +123,13 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
   doc.setTextColor(100, 116, 139);
   doc.text("Date:", metaX - 45, rightY);
   doc.setTextColor(15, 23, 42);
-  doc.text(new Date(invoice.issueDate).toLocaleDateString(), metaX, rightY, { align: "right" });
+  doc.text(new Date(invoice.issueDate).toLocaleDateString("en-US", { timeZone: "UTC" }), metaX, rightY, { align: "right" });
   rightY += 5.5;
 
   doc.setTextColor(100, 116, 139);
   doc.text("Due Date:", metaX - 45, rightY);
   doc.setTextColor(15, 23, 42);
-  doc.text(new Date(invoice.dueDate).toLocaleDateString(), metaX, rightY, { align: "right" });
+  doc.text(new Date(invoice.dueDate).toLocaleDateString("en-US", { timeZone: "UTC" }), metaX, rightY, { align: "right" });
 
   // PAID stamp will be drawn as a watermark overlay AFTER the main content
   // (deferred to end of function so it appears on top of all content)
@@ -314,7 +314,7 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
       if (invoice.paidAt) {
         ctx.font = "bold 26px Arial, Helvetica, sans-serif";
         ctx.fillText(
-          new Date(invoice.paidAt).toLocaleDateString(),
+          new Date(invoice.paidAt).toLocaleDateString("en-US", { timeZone: "UTC" }),
           0,
           55
         );

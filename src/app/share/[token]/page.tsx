@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import ShareInvoiceClient from "./ShareInvoiceClient";
+import { formatDate } from "@/lib/dates";
 
 export default async function ShareInvoicePage({
   params,
@@ -93,7 +94,7 @@ export default async function ShareInvoicePage({
                 </div>
                 {invoice.paidAt && (
                   <div className="text-center text-green-700 font-semibold text-xs sm:text-sm tracking-widest mt-1">
-                    {new Date(invoice.paidAt).toLocaleDateString()}
+                    {formatDate(invoice.paidAt)}
                   </div>
                 )}
               </div>
@@ -133,11 +134,11 @@ export default async function ShareInvoicePage({
               </p>
               <p className="text-sm">
                 <span className="text-gray-500">Date:</span>{" "}
-                {new Date(invoice.issueDate).toLocaleDateString()}
+                {formatDate(invoice.issueDate)}
               </p>
               <p className="text-sm">
                 <span className="text-gray-500">Due Date:</span>{" "}
-                {new Date(invoice.dueDate).toLocaleDateString()}
+                {formatDate(invoice.dueDate)}
               </p>
             </div>
           </div>

@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import InvoiceActions from "@/components/InvoiceActions";
+import { formatDate } from "@/lib/dates";
 
 export default async function InvoicesPage() {
   const user = await requireUser();
@@ -68,7 +69,7 @@ export default async function InvoicesPage() {
                       ${inv.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs text-muted">
-                      Due {new Date(inv.dueDate).toLocaleDateString()}
+                      Due {formatDate(inv.dueDate)}
                     </p>
                   </div>
                   <InvoiceActions invoiceId={inv.id} status={inv.status} clientEmail={inv.client.email} invoiceNumber={inv.invoiceNumber} />
@@ -101,10 +102,10 @@ export default async function InvoicesPage() {
                     </td>
                     <td className="px-5 py-3 text-sm">{inv.client.name}</td>
                     <td className="px-5 py-3 text-sm text-muted">
-                      {new Date(inv.issueDate).toLocaleDateString()}
+                      {formatDate(inv.issueDate)}
                     </td>
                     <td className="px-5 py-3 text-sm text-muted">
-                      {new Date(inv.dueDate).toLocaleDateString()}
+                      {formatDate(inv.dueDate)}
                     </td>
                     <td className="px-5 py-3 font-medium">
                       ${inv.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}

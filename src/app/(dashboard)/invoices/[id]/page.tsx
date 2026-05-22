@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { notFound } from "next/navigation";
 import InvoiceActions from "@/components/InvoiceActions";
+import { formatDate } from "@/lib/dates";
 
 export default async function InvoiceDetailPage({
   params,
@@ -82,11 +83,11 @@ export default async function InvoiceDetailPage({
             </p>
             <p className="text-sm">
               <span className="text-muted">Date:</span>{" "}
-              {new Date(invoice.issueDate).toLocaleDateString()}
+              {formatDate(invoice.issueDate)}
             </p>
             <p className="text-sm">
               <span className="text-muted">Due Date:</span>{" "}
-              {new Date(invoice.dueDate).toLocaleDateString()}
+              {formatDate(invoice.dueDate)}
             </p>
           </div>
         </div>

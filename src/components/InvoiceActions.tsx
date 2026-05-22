@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { generateInvoicePdf } from "@/lib/generatePdf";
+import { localDateString } from "@/lib/dates";
 
 export default function InvoiceActions({
   invoiceId,
@@ -161,7 +162,7 @@ export default function InvoiceActions({
     await fetch(`/api/invoices/${invoiceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "sent" }),
+      body: JSON.stringify({ status: "sent", sentDate: localDateString() }),
     });
     router.refresh();
   }
@@ -171,7 +172,7 @@ export default function InvoiceActions({
     await fetch(`/api/invoices/${invoiceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "paid" }),
+      body: JSON.stringify({ status: "paid", paidDate: localDateString() }),
     });
     router.refresh();
   }

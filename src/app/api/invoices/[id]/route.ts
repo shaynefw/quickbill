@@ -60,8 +60,18 @@ export async function PATCH(
   const data = await request.json();
 
   const updateData: Record<string, unknown> = { status: data.status };
-  if (data.status === "paid") updateData.paidAt = new Date();
-  if (data.status === "sent") updateData.sentAt = new Date();
+  if (data.status === "paid") {
+    // Use client-supplied local date (YYYY-MM-DD) so the paid date reflects
+    // the user's calendar day, not the server's UTC day.
+    updateData.paidAt = data.paidDate
+      ? new Date(data.paidDate)
+      : new Date();
+  }
+  if (data.status === "sent") {
+    updateData.sentAt = data.sentDate
+      ? new Date(data.sentDate)
+      : new Date();
+  }
   // When undoing paid, clear paidAt
   if (data.status === "sent" && data.undoPaid) {
     updateData.paidAt = null;

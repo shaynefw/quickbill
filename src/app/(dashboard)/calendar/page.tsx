@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { localDateString } from "@/lib/dates";
 
 interface Client {
   id: string;
@@ -354,9 +355,10 @@ export default function CalendarPage() {
                     required
                     defaultValue={
                       editing
-                        ? new Date(editing.startTime).toISOString().split("T")[0]
-                        : selectedDate?.toISOString().split("T")[0] ||
-                          new Date().toISOString().split("T")[0]
+                        ? localDateString(new Date(editing.startTime))
+                        : selectedDate
+                        ? localDateString(selectedDate)
+                        : localDateString()
                     }
                     className="w-full px-3 py-2 border border-border rounded-lg text-sm"
                   />

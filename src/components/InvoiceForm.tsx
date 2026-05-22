@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { localDateString, utcDateString } from "@/lib/dates";
 
 interface Client {
   id: string;
@@ -55,10 +56,14 @@ export default function InvoiceForm({
     initialData?.invoiceNumber || ""
   );
   const [issueDate, setIssueDate] = useState(
-    initialData?.issueDate || new Date().toISOString().split("T")[0]
+    initialData?.issueDate
+      ? utcDateString(initialData.issueDate)
+      : localDateString()
   );
   const [dueDate, setDueDate] = useState(
-    initialData?.dueDate || new Date().toISOString().split("T")[0]
+    initialData?.dueDate
+      ? utcDateString(initialData.dueDate)
+      : localDateString()
   );
   const [duePreset, setDuePreset] = useState<string>(() => {
     if (!initialData?.dueDate) return "receipt";
@@ -74,11 +79,16 @@ export default function InvoiceForm({
 
   function applyDuePreset(preset: string, baseIssue: string = issueDate) {
     setDuePreset(preset);
-    const base = new Date(baseIssue);
+    // Parse YYYY-MM-DD as UTC midnight to avoid timezone drift in date math.
+    const base = new Date(`${baseIssue}T00:00:00Z`);
+    function addDays(days: number): string {
+      const d = new Date(base.getTime() + days * 86400000);
+      return d.toISOString().split("T")[0];
+    }
     if (preset === "receipt") setDueDate(baseIssue);
-    else if (preset === "net7") setDueDate(new Date(base.getTime() + 7 * 86400000).toISOString().split("T")[0]);
-    else if (preset === "net14") setDueDate(new Date(base.getTime() + 14 * 86400000).toISOString().split("T")[0]);
-    else if (preset === "net30") setDueDate(new Date(base.getTime() + 30 * 86400000).toISOString().split("T")[0]);
+    else if (preset === "net7") setDueDate(addDays(7));
+    else if (preset === "net14") setDueDate(addDays(14));
+    else if (preset === "net30") setDueDate(addDays(30));
   }
   const [taxRate, setTaxRate] = useState(initialData?.taxRate || 0);
   const [discountType, setDiscountType] = useState(

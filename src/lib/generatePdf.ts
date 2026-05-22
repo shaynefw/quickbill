@@ -324,7 +324,7 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
       const stampWidthMm = 90;
       const stampHeightMm = (stampWidthMm * canvasH) / canvasW;
       const stampX = pageWidth / 2 - 5;
-      const stampY = 80;
+      const stampY = 50;
       doc.addImage(
         canvas.toDataURL("image/png"),
         "PNG",

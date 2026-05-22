@@ -278,43 +278,61 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
     doc.text(noteLines, margin, yPos);
   }
 
-  // PAID stamp overlay (drawn last so it sits on top)
-  if (invoice.status === "paid") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctx: any = (doc as any).context2d;
+  // PAID stamp overlay (drawn last so it sits on top of all content)
+  if (invoice.status === "paid" && typeof document !== "undefined") {
+    // Render the stamp on an HTML5 canvas, then embed as image.
+    // Canvas gives reliable rotation, alpha, and font rendering.
+    const scale = 3; // higher = sharper in PDF
+    const canvasW = 600 * scale;
+    const canvasH = 300 * scale;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const ctx = canvas.getContext("2d");
     if (ctx) {
-      const cx = pageWidth / 2 + 30;
-      const cy = 120;
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(-0.26); // ~-15 degrees in radians
-      // Semi-transparent green
-      ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = "#16a34a";
-      ctx.fillStyle = "#16a34a";
-      ctx.lineWidth = 2.5;
-      // Outer box
-      const w = 90, h = 36;
-      ctx.strokeRect(-w / 2, -h / 2, w, h);
-      // Inner box
-      const iw = 86, ih = 32;
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(-iw / 2, -ih / 2, iw, ih);
+      ctx.scale(scale, scale);
+      ctx.translate(300, 150);
+      ctx.rotate((-15 * Math.PI) / 180);
+      ctx.globalAlpha = 0.5;
+      const stampColor = "#16a34a";
+      ctx.strokeStyle = stampColor;
+      ctx.fillStyle = stampColor;
+
+      // Outer + inner double-border box
+      ctx.lineWidth = 8;
+      ctx.strokeRect(-220, -75, 440, 150);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-208, -63, 416, 126);
+
       // PAID text
-      ctx.font = "bold 48px helvetica";
+      ctx.font = "900 130px Arial, Helvetica, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("PAID", 0, -2);
-      // Paid date
+      ctx.fillText("PAID", 0, -12);
+
+      // Paid date below
       if (invoice.paidAt) {
-        ctx.font = "10px helvetica";
+        ctx.font = "bold 26px Arial, Helvetica, sans-serif";
         ctx.fillText(
           new Date(invoice.paidAt).toLocaleDateString(),
           0,
-          14
+          55
         );
       }
-      ctx.restore();
+
+      // Add stamp image — sized in PDF mm units
+      const stampWidthMm = 90;
+      const stampHeightMm = (stampWidthMm * canvasH) / canvasW;
+      const stampX = pageWidth / 2 - 5;
+      const stampY = 80;
+      doc.addImage(
+        canvas.toDataURL("image/png"),
+        "PNG",
+        stampX,
+        stampY,
+        stampWidthMm,
+        stampHeightMm
+      );
     }
   }
 

@@ -24,6 +24,7 @@ export async function GET(
       ...invoice,
       issueDate: invoice.issueDate.toISOString(),
       dueDate: invoice.dueDate.toISOString(),
+      paidAt: invoice.paidAt?.toISOString() || null,
     },
     user: {
       companyName: user.companyName || user.fullName,

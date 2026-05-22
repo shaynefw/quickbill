@@ -106,12 +106,15 @@ export default function InvoiceActions({
   async function sendReceiptEmail() {
     setOpen(false);
     try {
-      const [pdfRes, tmplRes] = await Promise.all([
+      const [pdfRes, shareRes, tmplRes] = await Promise.all([
         fetch(`/api/invoices/${invoiceId}/pdf`),
+        fetch(`/api/invoices/${invoiceId}/share`, { method: "POST" }),
         fetch("/api/email-templates"),
       ]);
       const { invoice: invData, user: userData } = await pdfRes.json();
+      const { token } = await shareRes.json();
       const templates = await tmplRes.json();
+      const shareUrl = `${window.location.origin}/share/${token}`;
       const receiptTemplate = templates.find(
         (t: { type: string }) => t.type === "receipt"
       );
@@ -133,9 +136,10 @@ export default function InvoiceActions({
             .replace(/\{\{companyName\}\}/g, userData.companyName || "");
         subject = replacePlaceholders(receiptTemplate.subject);
         body = replacePlaceholders(receiptTemplate.body);
+        body += `\n\nView your paid invoice here:\n${shareUrl}`;
       } else {
         subject = `Payment Receipt - Invoice ${invoiceNumber || ""}`;
-        body = `Hi,\n\nThank you for your payment of ${totalFormatted} for invoice ${invoiceNumber || ""}.\n\nThis confirms that your payment has been received.\n\nBest regards,\n${userData.companyName || ""}`;
+        body = `Hi,\n\nThank you for your payment of ${totalFormatted} for invoice ${invoiceNumber || ""}.\n\nThis confirms that your payment has been received.\n\nView your paid invoice here:\n${shareUrl}\n\nBest regards,\n${userData.companyName || ""}`;
       }
 
       window.open(

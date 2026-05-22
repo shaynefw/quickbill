@@ -6,6 +6,7 @@ interface InvoiceData {
   status: string;
   issueDate: string;
   dueDate: string;
+  paidAt?: string | null;
   notes: string;
   subtotal: number;
   discountType: string;
@@ -129,6 +130,46 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
   doc.text("Due Date:", metaX - 45, rightY);
   doc.setTextColor(15, 23, 42);
   doc.text(new Date(invoice.dueDate).toLocaleDateString(), metaX, rightY, { align: "right" });
+
+  // PAID stamp (rotated, overlay)
+  if (invoice.status === "paid") {
+    const stampX = pageWidth - margin - 50;
+    const stampY = leftStartY + 30;
+    doc.saveGraphicsState();
+    // Rotate around stamp center
+    const angle = -15;
+    const rad = (angle * Math.PI) / 180;
+    doc.setDrawColor(22, 163, 74);
+    doc.setTextColor(22, 163, 74);
+    doc.setLineWidth(1.5);
+    // Draw rotated text and rectangle using transformation matrix
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    // jsPDF rotation: use text with angle, rect manually
+    doc.setFontSize(28);
+    doc.setFont("helvetica", "bold");
+    doc.text("PAID", stampX, stampY, { angle, align: "center" });
+    // Draw rotated rectangle around it
+    const w = 42, h = 16;
+    const cx = stampX, cy = stampY - 6;
+    const corners = [
+      { x: -w / 2, y: -h / 2 },
+      { x: w / 2, y: -h / 2 },
+      { x: w / 2, y: h / 2 },
+      { x: -w / 2, y: h / 2 },
+    ].map((p) => ({ x: cx + p.x * cos - p.y * sin, y: cy + p.x * sin + p.y * cos }));
+    doc.line(corners[0].x, corners[0].y, corners[1].x, corners[1].y);
+    doc.line(corners[1].x, corners[1].y, corners[2].x, corners[2].y);
+    doc.line(corners[2].x, corners[2].y, corners[3].x, corners[3].y);
+    doc.line(corners[3].x, corners[3].y, corners[0].x, corners[0].y);
+    if (invoice.paidAt) {
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text(new Date(invoice.paidAt).toLocaleDateString(), stampX, stampY + 3, { angle, align: "center" });
+    }
+    doc.restoreGraphicsState();
+    doc.setFont("helvetica", "normal");
+  }
 
   // Divider line — use the taller of the two columns
   yPos = Math.max(leftEndY, rightY) + 10;

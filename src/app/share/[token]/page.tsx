@@ -96,10 +96,20 @@ export default async function ShareInvoicePage({
                 </p>
               )}
             </div>
-            <div className="sm:text-right">
+            <div className="sm:text-right relative">
               <h3 className="text-2xl font-bold mb-2" style={{ color: userData.primaryColor }}>
                 INVOICE
               </h3>
+              {invoice.status === "paid" && (
+                <div className="inline-block sm:absolute sm:-top-2 sm:right-0 mb-2 px-4 py-1.5 border-4 border-green-600 text-green-600 font-bold text-xl tracking-widest rounded-md transform sm:rotate-[-8deg] bg-white/90">
+                  PAID
+                  {invoice.paidAt && (
+                    <div className="text-[10px] font-normal tracking-normal text-green-700 mt-0.5">
+                      {new Date(invoice.paidAt).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+              )}
               <p className="text-sm">
                 <span className="text-gray-500">Invoice #:</span>{" "}
                 {invoice.invoiceNumber}

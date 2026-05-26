@@ -411,7 +411,7 @@ export default function SettingsPage() {
               <form onSubmit={handlePresetSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Name *</label>
+                    <label className="block text-sm font-medium mb-1">Preset name *</label>
                     <input
                       name="name"
                       required
@@ -435,7 +435,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description *</label>
+                  <label className="block text-sm font-medium mb-1">Item name *</label>
+                  <p className="text-xs text-muted mb-1">This is what appears as the line item on the invoice.</p>
                   <input
                     name="description"
                     required

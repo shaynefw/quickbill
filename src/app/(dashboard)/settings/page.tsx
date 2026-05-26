@@ -47,6 +47,12 @@ export default function SettingsPage() {
   const [backupLoading, setBackupLoading] = useState(false);
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreResult, setRestoreResult] = useState<Record<string, number> | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then(setSettings);
@@ -57,13 +63,18 @@ export default function SettingsPage() {
   async function saveSettings() {
     if (!settings) return;
     setSaving(true);
-    await fetch("/api/settings", {
+    const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
     });
     setSaving(false);
-    router.refresh();
+    if (res.ok) {
+      showToast("Settings saved");
+      router.refresh();
+    } else {
+      showToast("Failed to save settings");
+    }
   }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -89,12 +100,12 @@ export default function SettingsPage() {
   }
 
   async function saveTemplate(template: EmailTemplate) {
-    await fetch(`/api/email-templates/${template.id}`, {
+    const res = await fetch(`/api/email-templates/${template.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(template),
     });
-    alert("Template saved!");
+    showToast(res.ok ? "Template saved" : "Failed to save template");
   }
 
   async function handlePresetSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -112,12 +123,14 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      showToast("Preset updated");
     } else {
       await fetch("/api/preset-items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      showToast("Preset created");
     }
 
     setShowPresetForm(false);
@@ -203,6 +216,14 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-3xl">
+      {toast && (
+        <div className="fixed top-20 right-4 lg:top-6 z-50 bg-green-600 text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="text-sm font-medium">{toast}</span>
+        </div>
+      )}
       <h1 className="text-xl sm:text-2xl font-bold mb-6">Settings</h1>
 
       <div className="flex gap-1 mb-6 bg-card-bg rounded-lg border border-border p-1 overflow-x-auto">

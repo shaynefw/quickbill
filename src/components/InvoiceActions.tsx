@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { generateInvoicePdf } from "@/lib/generatePdf";
-import { localDateString } from "@/lib/dates";
+import { localDateString, formatDate } from "@/lib/dates";
 
 export default function InvoiceActions({
   invoiceId,
@@ -67,7 +67,7 @@ export default function InvoiceActions({
 
       const to = clientEmail || "";
       const totalFormatted = `$${Number(invData.total).toFixed(2)}`;
-      const dueDateFormatted = new Date(invData.dueDate).toLocaleDateString();
+      const dueDateFormatted = formatDate(invData.dueDate);
 
       let subject: string;
       let body: string;
@@ -122,7 +122,7 @@ export default function InvoiceActions({
 
       const to = clientEmail || "";
       const totalFormatted = `$${Number(invData.total).toFixed(2)}`;
-      const dueDateFormatted = new Date(invData.dueDate).toLocaleDateString();
+      const dueDateFormatted = formatDate(invData.dueDate);
 
       let subject: string;
       let body: string;

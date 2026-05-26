@@ -15,6 +15,7 @@ export default async function ShareInvoicePage({
     include: {
       items: true,
       client: true,
+      organization: true,
       user: {
         select: {
           fullName: true,
@@ -32,6 +33,7 @@ export default async function ShareInvoicePage({
   if (!invoice) notFound();
 
   const user = invoice.user;
+  const org = invoice.organization;
 
   // Serialize dates for client component
   const invoiceData = {
@@ -45,12 +47,12 @@ export default async function ShareInvoicePage({
   };
 
   const userData = {
-    companyName: user.companyName || user.fullName,
-    companyEmail: user.companyEmail,
-    companyPhone: user.companyPhone,
-    companyAddress: user.companyAddress,
-    logoUrl: user.logoUrl,
-    primaryColor: user.primaryColor || "#2563eb",
+    companyName: org?.companyName || user.companyName || user.fullName,
+    companyEmail: org?.companyEmail || user.companyEmail,
+    companyPhone: org?.companyPhone || user.companyPhone,
+    companyAddress: org?.companyAddress || user.companyAddress,
+    logoUrl: org?.logoUrl || user.logoUrl,
+    primaryColor: org?.primaryColor || user.primaryColor || "#2563eb",
   };
 
   return (

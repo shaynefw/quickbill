@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireActiveOrg } from "@/lib/session";
 
 export async function POST(request: Request) {
   const user = await requireUser();
+  const org = await requireActiveOrg(user.id);
   const data = await request.json();
 
   const invoice = await prisma.invoice.create({
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
       invoiceNumber: data.invoiceNumber,
       clientId: data.clientId,
       userId: user.id,
+      organizationId: org.id,
       issueDate: new Date(data.issueDate),
       dueDate: new Date(data.dueDate),
       taxRate: data.taxRate,

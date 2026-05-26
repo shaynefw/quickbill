@@ -14,10 +14,36 @@ export default async function InvoiceDetailPage({
 
   const invoice = await prisma.invoice.findFirst({
     where: { id, userId: user.id },
-    include: { items: true, client: true },
+    include: { items: true, client: true, organization: true },
   });
 
   if (!invoice) notFound();
+
+  // Use invoice's organization branding (falls back to user's legacy fields)
+  const branding: {
+    companyName: string;
+    companyEmail: string;
+    companyPhone: string;
+    companyAddress: string;
+    logoUrl: string;
+    primaryColor: string;
+  } = invoice.organization
+    ? {
+        companyName: invoice.organization.companyName,
+        companyEmail: invoice.organization.companyEmail,
+        companyPhone: invoice.organization.companyPhone,
+        companyAddress: invoice.organization.companyAddress,
+        logoUrl: invoice.organization.logoUrl,
+        primaryColor: invoice.organization.primaryColor,
+      }
+    : {
+        companyName: user.companyName,
+        companyEmail: user.companyEmail,
+        companyPhone: user.companyPhone,
+        companyAddress: user.companyAddress,
+        logoUrl: user.logoUrl,
+        primaryColor: user.primaryColor,
+      };
 
   const statusStyles: Record<string, string> = {
     draft: "bg-gray-100 text-gray-600",
@@ -44,36 +70,36 @@ export default async function InvoiceDetailPage({
 
       <div
         className="bg-white rounded-xl border border-border p-4 sm:p-8 shadow-sm overflow-x-auto"
-        style={{ "--inv-primary": user.primaryColor } as React.CSSProperties}
+        style={{ "--inv-primary": branding.primaryColor } as React.CSSProperties}
       >
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b-2" style={{ borderColor: user.primaryColor }}>
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b-2" style={{ borderColor: branding.primaryColor }}>
           <div>
-            {user.logoUrl && (
+            {branding.logoUrl && (
               <img
-                src={user.logoUrl}
+                src={branding.logoUrl}
                 alt="Logo"
                 className="h-12 mb-3 object-contain"
               />
             )}
-            <h2 className="text-xl font-bold" style={{ color: user.primaryColor }}>
-              {user.companyName || user.fullName}
+            <h2 className="text-xl font-bold" style={{ color: branding.primaryColor }}>
+              {branding.companyName || user.fullName}
             </h2>
-            {user.companyEmail && (
-              <p className="text-sm text-muted">{user.companyEmail}</p>
+            {branding.companyEmail && (
+              <p className="text-sm text-muted">{branding.companyEmail}</p>
             )}
-            {user.companyPhone && (
-              <p className="text-sm text-muted">{user.companyPhone}</p>
+            {branding.companyPhone && (
+              <p className="text-sm text-muted">{branding.companyPhone}</p>
             )}
-            {user.companyAddress && (
+            {branding.companyAddress && (
               <p className="text-sm text-muted whitespace-pre-line">
-                {user.companyAddress}
+                {branding.companyAddress}
               </p>
             )}
           </div>
           <div className="sm:text-right">
             <h3
               className="text-xl sm:text-2xl font-bold mb-2"
-              style={{ color: user.primaryColor }}
+              style={{ color: branding.primaryColor }}
             >
               INVOICE
             </h3>
@@ -95,7 +121,7 @@ export default async function InvoiceDetailPage({
         <div className="mb-8">
           <h4
             className="text-xs font-semibold uppercase tracking-wide mb-2"
-            style={{ color: user.primaryColor }}
+            style={{ color: branding.primaryColor }}
           >
             Bill To
           </h4>
@@ -115,7 +141,7 @@ export default async function InvoiceDetailPage({
           <thead>
             <tr
               className="text-left text-sm text-white"
-              style={{ backgroundColor: user.primaryColor }}
+              style={{ backgroundColor: branding.primaryColor }}
             >
               <th className="px-4 py-2.5 rounded-tl-lg">Description</th>
               <th className="px-4 py-2.5 text-right">Qty</th>
@@ -171,10 +197,10 @@ export default async function InvoiceDetailPage({
             )}
             <div
               className="flex justify-between font-bold text-lg pt-2 border-t-2"
-              style={{ borderColor: user.primaryColor }}
+              style={{ borderColor: branding.primaryColor }}
             >
               <span>Total</span>
-              <span style={{ color: user.primaryColor }}>
+              <span style={{ color: branding.primaryColor }}>
                 ${invoice.total.toFixed(2)}
               </span>
             </div>
@@ -185,7 +211,7 @@ export default async function InvoiceDetailPage({
           <div className="mt-8 pt-6 border-t border-border">
             <h4
               className="text-xs font-semibold uppercase tracking-wide mb-2"
-              style={{ color: user.primaryColor }}
+              style={{ color: branding.primaryColor }}
             >
               Notes
             </h4>

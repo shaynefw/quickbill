@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireActiveOrg } from "@/lib/session";
 
 export async function GET() {
   const user = await requireUser();
+  const org = await requireActiveOrg(user.id);
   const items = await prisma.presetItem.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, organizationId: org.id },
     orderBy: { name: "asc" },
   });
   return NextResponse.json(items);
@@ -13,6 +14,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const user = await requireUser();
+  const org = await requireActiveOrg(user.id);
   const data = await request.json();
 
   const item = await prisma.presetItem.create({
@@ -21,6 +23,7 @@ export async function POST(request: Request) {
       description: data.description,
       rate: data.rate,
       userId: user.id,
+      organizationId: org.id,
     },
   });
 

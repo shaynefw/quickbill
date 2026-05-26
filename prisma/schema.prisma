@@ -14,6 +14,30 @@ model User {
   passwordHash   String
   fullName       String
   email          String   @default("")
+  // Legacy company fields (kept for backwards-compat; the active organization
+  // is the source of truth going forward).
+  companyName    String   @default("")
+  companyEmail   String   @default("")
+  companyPhone   String   @default("")
+  companyAddress String   @default("")
+  logoUrl        String   @default("")
+  primaryColor   String   @default("#2563eb")
+  accentColor    String   @default("#1e40af")
+  activeOrgId    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organizations  Organization[]
+  clients        Client[]
+  invoices       Invoice[]
+  emailTemplates EmailTemplate[]
+  presetItems    PresetItem[]
+  appointments   Appointment[]
+}
+
+model Organization {
+  id             String   @id @default(uuid())
+  name           String   // Display name in switcher, e.g. "The Computer Guy"
   companyName    String   @default("")
   companyEmail   String   @default("")
   companyPhone   String   @default("")
@@ -24,10 +48,12 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  clients        Client[]
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoices       Invoice[]
-  emailTemplates EmailTemplate[]
+  clients        Client[]
   presetItems    PresetItem[]
+  emailTemplates EmailTemplate[]
   appointments   Appointment[]
 }
 
@@ -42,10 +68,12 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invoices     Invoice[]
-  appointments Appointment[]
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  invoices       Invoice[]
+  appointments   Appointment[]
 }
 
 model Invoice {
@@ -68,11 +96,13 @@ model Invoice {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  userId   String
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId String
-  client   Client  @relation(fields: [clientId], references: [id])
-  items    InvoiceItem[]
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  clientId       String
+  client         Client         @relation(fields: [clientId], references: [id])
+  items          InvoiceItem[]
 }
 
 model InvoiceItem {
@@ -93,8 +123,10 @@ model EmailTemplate {
   body    String
   type    String @default("invoice")
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model PresetItem {
@@ -105,8 +137,10 @@ model PresetItem {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model Appointment {
@@ -120,8 +154,10 @@ model Appointment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  userId   String
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId String?
-  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  clientId       String?
+  client         Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
 }

@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireActiveOrg } from "@/lib/session";
 
 export async function GET(request: Request) {
   const user = await requireUser();
+  const org = await requireActiveOrg(user.id);
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
 
   const where: {
     userId: string;
+    organizationId: string;
     startTime?: { gte?: Date; lte?: Date };
-  } = { userId: user.id };
+  } = { userId: user.id, organizationId: org.id };
   if (from || to) {
     where.startTime = {};
     if (from) where.startTime.gte = new Date(from);
@@ -29,11 +31,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const user = await requireUser();
+  const org = await requireActiveOrg(user.id);
   const data = await request.json();
 
   const appointment = await prisma.appointment.create({
     data: {
       userId: user.id,
+      organizationId: org.id,
       title: data.title,
       description: data.description || "",
       startTime: new Date(data.startTime),

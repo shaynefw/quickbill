@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface UserSettings {
   companyName: string;
@@ -28,14 +28,30 @@ interface PresetItem {
   rate: number;
 }
 
+interface OrgListItem {
+  id: string;
+  name: string;
+  companyName: string;
+  logoUrl: string;
+  primaryColor: string;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"company" | "appearance" | "email" | "presets" | "backup">("company");
+  const initialTab = (searchParams.get("tab") || "company") as
+    | "company"
+    | "appearance"
+    | "email"
+    | "presets"
+    | "backup"
+    | "organizations";
+  const [activeTab, setActiveTab] = useState<typeof initialTab>(initialTab);
   const [showPresetForm, setShowPresetForm] = useState(false);
   const [editingPreset, setEditingPreset] = useState<PresetItem | null>(null);
   const [backupSections, setBackupSections] = useState({
@@ -48,6 +64,10 @@ export default function SettingsPage() {
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreResult, setRestoreResult] = useState<Record<string, number> | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [orgs, setOrgs] = useState<OrgListItem[]>([]);
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [creatingOrg, setCreatingOrg] = useState(false);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -58,7 +78,70 @@ export default function SettingsPage() {
     fetch("/api/settings").then((r) => r.json()).then(setSettings);
     fetch("/api/email-templates").then((r) => r.json()).then(setTemplates);
     fetch("/api/preset-items").then((r) => r.json()).then(setPresetItems);
+    fetchOrgs();
   }, []);
+
+  async function fetchOrgs() {
+    const res = await fetch("/api/organizations");
+    const data = await res.json();
+    setOrgs(data.organizations || []);
+    setActiveOrgId(data.activeOrgId || null);
+  }
+
+  async function createOrg() {
+    if (!newOrgName.trim()) return;
+    setCreatingOrg(true);
+    await fetch("/api/organizations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newOrgName.trim() }),
+    });
+    setNewOrgName("");
+    setCreatingOrg(false);
+    fetchOrgs();
+    showToast("Organization created");
+  }
+
+  async function switchOrg(id: string) {
+    await fetch("/api/organizations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activeOrgId: id }),
+    });
+    setActiveOrgId(id);
+    // Refresh settings since they come from the active org now
+    const res = await fetch("/api/settings");
+    setSettings(await res.json());
+    const tmplRes = await fetch("/api/email-templates");
+    setTemplates(await tmplRes.json());
+    const presetsRes = await fetch("/api/preset-items");
+    setPresetItems(await presetsRes.json());
+    router.refresh();
+    showToast("Switched organization");
+  }
+
+  async function renameOrg(id: string, name: string) {
+    if (!name.trim()) return;
+    await fetch(`/api/organizations/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    fetchOrgs();
+    showToast("Organization renamed");
+  }
+
+  async function deleteOrg(id: string) {
+    if (!confirm("Delete this organization? Its invoices, clients, and other data will remain but become unassigned.")) return;
+    const res = await fetch(`/api/organizations/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || "Failed to delete");
+      return;
+    }
+    fetchOrgs();
+    showToast("Organization deleted");
+  }
 
   async function saveSettings() {
     if (!settings) return;
@@ -207,6 +290,7 @@ export default function SettingsPage() {
   if (!settings) return <p className="text-muted">Loading...</p>;
 
   const tabs = [
+    { id: "organizations" as const, label: "Organizations" },
     { id: "company" as const, label: "Company" },
     { id: "appearance" as const, label: "Appearance" },
     { id: "presets" as const, label: "Presets" },
@@ -242,8 +326,104 @@ export default function SettingsPage() {
         ))}
       </div>
 
+      {activeTab === "organizations" && (
+        <div className="space-y-6">
+          <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6">
+            <h3 className="font-semibold mb-2">Your organizations</h3>
+            <p className="text-sm text-muted mb-4">
+              Run multiple businesses from one account. Each organization has its own
+              company info, branding, clients, invoices, and presets. Switch between
+              them from the sidebar or here.
+            </p>
+            <div className="space-y-2">
+              {orgs.map((o) => (
+                <div
+                  key={o.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border ${
+                    o.id === activeOrgId ? "border-primary bg-primary/5" : "border-border"
+                  }`}
+                >
+                  <div className="w-10 h-10 shrink-0 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-bold overflow-hidden">
+                    {o.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={o.logoUrl} alt={o.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span style={{ color: o.primaryColor }}>{o.name.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{o.name}</p>
+                    {o.companyName && o.companyName !== o.name && (
+                      <p className="text-xs text-muted truncate">{o.companyName}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {o.id === activeOrgId ? (
+                      <span className="text-xs bg-primary text-white px-2 py-1 rounded">Active</span>
+                    ) : (
+                      <button
+                        onClick={() => switchOrg(o.id)}
+                        className="text-xs px-2.5 py-1 border border-border rounded hover:bg-gray-50"
+                      >
+                        Switch
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        const newName = prompt("Rename organization", o.name);
+                        if (newName) renameOrg(o.id, newName);
+                      }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Rename
+                    </button>
+                    {orgs.length > 1 && (
+                      <button
+                        onClick={() => deleteOrg(o.id)}
+                        className="text-xs text-danger hover:underline"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6">
+            <h3 className="font-semibold mb-2">Add organization</h3>
+            <p className="text-sm text-muted mb-3">
+              Create a separate business profile (e.g. "The Computer Guy" and "The Handyman").
+              Each one has its own settings and data.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                value={newOrgName}
+                onChange={(e) => setNewOrgName(e.target.value)}
+                placeholder="Business name"
+                className="flex-1 px-3 py-2 border border-border rounded-lg text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") createOrg();
+                }}
+              />
+              <button
+                onClick={createOrg}
+                disabled={creatingOrg || !newOrgName.trim()}
+                className="px-5 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50"
+              >
+                {creatingOrg ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === "company" && (
         <div className="bg-card-bg rounded-xl border border-border p-4 sm:p-6 space-y-4">
+          <p className="text-xs text-muted -mt-2">
+            These settings apply to your active organization. Switch organizations from the sidebar to edit another.
+          </p>
           <div>
             <label className="block text-sm font-medium mb-1">Company Name</label>
             <input

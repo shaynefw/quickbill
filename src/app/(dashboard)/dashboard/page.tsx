@@ -1,12 +1,13 @@
-import { requireUser } from "@/lib/session";
+import { requireUser, requireActiveOrg } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
 export default async function DashboardPage() {
   const user = await requireUser();
+  const org = await requireActiveOrg(user.id);
 
   const invoices = await prisma.invoice.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, organizationId: org.id },
     include: { client: true },
     orderBy: { createdAt: "desc" },
   });

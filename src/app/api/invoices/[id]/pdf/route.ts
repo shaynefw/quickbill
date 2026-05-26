@@ -11,14 +11,15 @@ export async function GET(
 
   const invoice = await prisma.invoice.findFirst({
     where: { id, userId: user.id },
-    include: { items: true, client: true },
+    include: { items: true, client: true, organization: true },
   });
 
   if (!invoice) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Return invoice data as JSON for client-side PDF generation
+  // Use the invoice's organization branding (fallback to legacy user fields)
+  const org = invoice.organization;
   return NextResponse.json({
     invoice: {
       ...invoice,
@@ -27,12 +28,12 @@ export async function GET(
       paidAt: invoice.paidAt?.toISOString() || null,
     },
     user: {
-      companyName: user.companyName || user.fullName,
-      companyEmail: user.companyEmail,
-      companyPhone: user.companyPhone,
-      companyAddress: user.companyAddress,
-      logoUrl: user.logoUrl,
-      primaryColor: user.primaryColor || "#2563eb",
+      companyName: org?.companyName || user.companyName || user.fullName,
+      companyEmail: org?.companyEmail || user.companyEmail,
+      companyPhone: org?.companyPhone || user.companyPhone,
+      companyAddress: org?.companyAddress || user.companyAddress,
+      logoUrl: org?.logoUrl || user.logoUrl,
+      primaryColor: org?.primaryColor || user.primaryColor || "#2563eb",
     },
   });
 }

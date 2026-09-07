@@ -11,16 +11,24 @@ export default function InvoiceActions({
   status,
   clientEmail,
   invoiceNumber,
+  receiptSentAt,
 }: {
   invoiceId: string;
   status: string;
   clientEmail?: string;
   invoiceNumber?: string;
+  receiptSentAt?: string | Date | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [receiptSent, setReceiptSent] = useState(Boolean(receiptSentAt));
+  const [receiptDialog, setReceiptDialog] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setReceiptSent(Boolean(receiptSentAt));
+  }, [receiptSentAt]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -104,8 +112,22 @@ export default function InvoiceActions({
     }
   }
 
+  async function persistReceiptSent() {
+    setReceiptSent(true);
+    try {
+      await fetch(`/api/invoices/${invoiceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiptSent: true }),
+      });
+    } catch {
+      /* keep the optimistic UI even if persistence fails */
+    }
+  }
+
   async function sendReceiptEmail() {
     setOpen(false);
+    setReceiptDialog(false);
     try {
       const [pdfRes, shareRes, tmplRes] = await Promise.all([
         fetch(`/api/invoices/${invoiceId}/pdf`),
@@ -155,6 +177,7 @@ export default function InvoiceActions({
       );
       window.open(`mailto:${to}?subject=${subject}&body=${body}`, "_blank");
     }
+    await persistReceiptSent();
   }
 
   async function markSent() {
@@ -202,7 +225,9 @@ export default function InvoiceActions({
       : status === "sent"
       ? { label: "Mark as Paid", onClick: markPaid, color: "bg-green-600 hover:bg-green-700 text-white" }
       : status === "paid"
-      ? { label: "Send Receipt", onClick: sendReceiptEmail, color: "bg-green-600 hover:bg-green-700 text-white" }
+      ? receiptSent
+        ? { label: "Completed", onClick: () => setReceiptDialog(true), color: "bg-gray-100 hover:bg-gray-200 text-gray-600" }
+        : { label: "Send Receipt", onClick: sendReceiptEmail, color: "bg-green-600 hover:bg-green-700 text-white" }
       : null;
 
   return (
@@ -296,6 +321,53 @@ export default function InvoiceActions({
           </div>
         )}
       </div>
+
+      {/* "Completed" dialog — lets the user resend the receipt in case it never went out */}
+      {receiptDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setReceiptDialog(false)}
+        >
+          <div
+            className="relative w-full max-w-sm bg-white rounded-xl shadow-xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setReceiptDialog(false)}
+              className="absolute top-3 right-3 p-1 text-muted hover:text-primary rounded hover:bg-gray-100 transition"
+              aria-label="Close"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h3 className="text-base font-semibold mb-1 pr-6">Receipt already marked as sent</h3>
+            <p className="text-sm text-muted mb-5">
+              This invoice is marked completed. If the receipt didn&apos;t actually go
+              out, you can send it again.
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={sendReceiptEmail}
+                className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Send Receipt
+              </button>
+              <button
+                onClick={() => setReceiptDialog(false)}
+                className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

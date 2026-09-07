@@ -59,6 +59,15 @@ export async function PATCH(
   const { id } = await params;
   const data = await request.json();
 
+  // Standalone update: mark that a payment receipt was sent (or clear it).
+  if (data.receiptSent !== undefined && data.status === undefined) {
+    await prisma.invoice.updateMany({
+      where: { id, userId: user.id },
+      data: { receiptSentAt: data.receiptSent ? new Date() : null },
+    });
+    return NextResponse.json({ success: true });
+  }
+
   const updateData: Record<string, unknown> = { status: data.status };
   if (data.status === "paid") {
     // Use client-supplied local date (YYYY-MM-DD) so the paid date reflects

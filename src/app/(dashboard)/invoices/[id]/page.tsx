@@ -65,7 +65,7 @@ export default async function InvoiceDetailPage({
             {invoice.status}
           </span>
         </div>
-        <InvoiceActions invoiceId={invoice.id} status={invoice.status} clientEmail={invoice.client.email} invoiceNumber={invoice.invoiceNumber} />
+        <InvoiceActions invoiceId={invoice.id} status={invoice.status} clientEmail={invoice.client.email} invoiceNumber={invoice.invoiceNumber} receiptSentAt={invoice.receiptSentAt?.toISOString() ?? null} />
       </div>
 
       <div

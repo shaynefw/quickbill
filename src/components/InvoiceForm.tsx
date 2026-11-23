@@ -265,7 +265,7 @@ export default function InvoiceForm({
               <option value="">Select a client...</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.email})
+                  {c.name}{c.email ? ` (${c.email})` : ""}
                 </option>
               ))}
             </select>

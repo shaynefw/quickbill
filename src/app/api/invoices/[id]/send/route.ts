@@ -26,6 +26,13 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (!invoice.client.email) {
+    return NextResponse.json(
+      { error: "This client has no email address. Add one to send the invoice." },
+      { status: 400 }
+    );
+  }
+
   const template = await prisma.emailTemplate.findFirst({
     where: { userId: user.id, type: "invoice" },
   });

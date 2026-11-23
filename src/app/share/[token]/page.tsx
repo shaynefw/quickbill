@@ -156,7 +156,9 @@ export default async function ShareInvoicePage({
             {invoice.client.company && (
               <p className="text-sm text-gray-500">{invoice.client.company}</p>
             )}
-            <p className="text-sm text-gray-500">{invoice.client.email}</p>
+            {invoice.client.email && (
+              <p className="text-sm text-gray-500">{invoice.client.email}</p>
+            )}
             {invoice.client.address && (
               <p className="text-sm text-gray-500 whitespace-pre-line">
                 {invoice.client.address}

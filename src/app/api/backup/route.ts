@@ -112,9 +112,12 @@ export async function POST(request: Request) {
   if (backup.clients && Array.isArray(backup.clients)) {
     let imported = 0;
     for (const client of backup.clients) {
-      // Skip if a client with same email already exists
+      // Skip if a client with same email already exists.
+      // Clients without an email are matched by name instead.
       const existing = await prisma.client.findFirst({
-        where: { userId: user.id, email: client.email },
+        where: client.email
+          ? { userId: user.id, email: client.email }
+          : { userId: user.id, email: "", name: client.name || "" },
       });
       if (!existing) {
         await prisma.client.create({

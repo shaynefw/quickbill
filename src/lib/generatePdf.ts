@@ -160,8 +160,10 @@ export async function generateInvoicePdf(invoice: InvoiceData, user: UserData) {
     doc.text(invoice.client.company, margin, yPos);
     yPos += 4;
   }
-  doc.text(invoice.client.email, margin, yPos);
-  yPos += 4;
+  if (invoice.client.email) {
+    doc.text(invoice.client.email, margin, yPos);
+    yPos += 4;
+  }
   if (invoice.client.address) {
     const lines = invoice.client.address.split("\n");
     lines.forEach((line) => {

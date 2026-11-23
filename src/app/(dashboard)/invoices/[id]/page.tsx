@@ -129,7 +129,9 @@ export default async function InvoiceDetailPage({
           {invoice.client.company && (
             <p className="text-sm text-muted">{invoice.client.company}</p>
           )}
-          <p className="text-sm text-muted">{invoice.client.email}</p>
+          {invoice.client.email && (
+            <p className="text-sm text-muted">{invoice.client.email}</p>
+          )}
           {invoice.client.address && (
             <p className="text-sm text-muted whitespace-pre-line">
               {invoice.client.address}

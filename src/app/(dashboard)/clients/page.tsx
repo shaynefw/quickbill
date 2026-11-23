@@ -35,7 +35,7 @@ export default function ClientsPage() {
     const form = new FormData(e.currentTarget);
     const body = {
       name: form.get("name"),
-      email: form.get("email"),
+      email: String(form.get("email") ?? "").trim(),
       phone: form.get("phone"),
       company: form.get("company"),
       address: form.get("address"),
@@ -100,11 +100,10 @@ export default function ClientsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email *</label>
+                  <label className="block text-sm font-medium mb-1">Email</label>
                   <input
                     name="email"
                     type="email"
-                    required
                     defaultValue={editing?.email}
                     className="w-full px-3 py-2 border border-border rounded-lg text-sm"
                   />
@@ -183,7 +182,7 @@ export default function ClientsPage() {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="font-medium">{client.name}</p>
-                    <p className="text-sm text-muted">{client.email}</p>
+                    <p className="text-sm text-muted">{client.email || "No email"}</p>
                   </div>
                   <span className="text-xs text-muted bg-gray-100 px-2 py-0.5 rounded">
                     {client._count?.invoices || 0} invoices
@@ -226,7 +225,7 @@ export default function ClientsPage() {
                 {clients.map((client) => (
                   <tr key={client.id} className="border-b border-border last:border-0 hover:bg-background">
                     <td className="px-5 py-3 font-medium">{client.name}</td>
-                    <td className="px-5 py-3 text-sm text-muted">{client.email}</td>
+                    <td className="px-5 py-3 text-sm text-muted">{client.email || "—"}</td>
                     <td className="px-5 py-3 text-sm text-muted">{client.company || "—"}</td>
                     <td className="px-5 py-3 text-sm text-muted">{client._count?.invoices || 0}</td>
                     <td className="px-5 py-3">

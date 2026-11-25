@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useDialog } from "@/components/DialogProvider";
 
 interface Client {
   id: string;
@@ -14,6 +15,7 @@ interface Client {
 }
 
 export default function ClientsPage() {
+  const { confirm } = useDialog();
   const [clients, setClients] = useState<Client[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
@@ -62,7 +64,12 @@ export default function ClientsPage() {
   }
 
   async function deleteClient(id: string) {
-    if (!confirm("Delete this client? This cannot be undone.")) return;
+    const ok = await confirm("Delete this client? This cannot be undone.", {
+      title: "Delete client",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/clients/${id}`, { method: "DELETE" });
     fetchClients();
   }

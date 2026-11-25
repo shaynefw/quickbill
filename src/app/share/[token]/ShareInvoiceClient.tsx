@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { generateInvoicePdf } from "@/lib/generatePdf";
+import { useDialog } from "@/components/DialogProvider";
 
 interface ShareInvoiceClientProps {
   invoiceData: {
@@ -45,6 +46,7 @@ export default function ShareInvoiceClient({
   invoiceData,
   userData,
 }: ShareInvoiceClientProps) {
+  const { notify } = useDialog();
   const [downloading, setDownloading] = useState(false);
 
   async function handleDownload() {
@@ -53,7 +55,9 @@ export default function ShareInvoiceClient({
       const doc = await generateInvoicePdf(invoiceData, userData);
       doc.save(`${invoiceData.invoiceNumber}.pdf`);
     } catch {
-      alert("Failed to generate PDF");
+      await notify("The PDF could not be generated. Please try again.", {
+        title: "PDF failed",
+      });
     }
     setDownloading(false);
   }

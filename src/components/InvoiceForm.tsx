@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { localDateString, utcDateString } from "@/lib/dates";
+import { useDialog } from "@/components/DialogProvider";
 
 interface Client {
   id: string;
@@ -44,6 +45,7 @@ export default function InvoiceForm({
   initialData?: InvoiceData;
 }) {
   const router = useRouter();
+  const { notify } = useDialog();
   const [clients, setClients] = useState<Client[]>([]);
   const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
   const [saving, setSaving] = useState(false);
@@ -188,11 +190,16 @@ export default function InvoiceForm({
 
   async function handleSubmit(status: string) {
     if (!clientId) {
-      alert("Please select a client");
+      await notify("Please select a client before saving.", {
+        title: "Client required",
+      });
       return;
     }
     if (items.some((i) => !i.description || i.rate <= 0)) {
-      alert("Please fill in all line items with valid rates");
+      await notify(
+        "Every line item needs a description and a rate above $0.",
+        { title: "Check your line items" }
+      );
       return;
     }
 
@@ -235,7 +242,9 @@ export default function InvoiceForm({
       router.push("/invoices");
       router.refresh();
     } else {
-      alert("Failed to save invoice");
+      await notify("The invoice could not be saved. Please try again.", {
+        title: "Save failed",
+      });
       setSaving(false);
     }
   }

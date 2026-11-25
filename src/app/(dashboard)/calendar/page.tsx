@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { localDateString } from "@/lib/dates";
+import { useDialog } from "@/components/DialogProvider";
 
 interface Client {
   id: string;
@@ -45,6 +46,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function CalendarPage() {
+  const { confirm } = useDialog();
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()));
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -111,7 +113,12 @@ export default function CalendarPage() {
   }
 
   async function deleteAppointment(id: string) {
-    if (!confirm("Delete this appointment?")) return;
+    const ok = await confirm("Delete this appointment?", {
+      title: "Delete appointment",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/appointments/${id}`, { method: "DELETE" });
     fetchAppointments();
   }

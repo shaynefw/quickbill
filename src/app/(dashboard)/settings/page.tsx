@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useDialog } from "@/components/DialogProvider";
 
 interface UserSettings {
   companyName: string;
@@ -37,6 +38,7 @@ interface OrgListItem {
 }
 
 export default function SettingsPage() {
+  const { notify, confirm, prompt } = useDialog();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -132,7 +134,11 @@ export default function SettingsPage() {
   }
 
   async function deleteOrg(id: string) {
-    if (!confirm("Delete this organization? Its invoices, clients, and other data will remain but become unassigned.")) return;
+    const ok = await confirm(
+      "Its invoices, clients, and other data will remain but become unassigned.",
+      { title: "Delete this organization?", confirmLabel: "Delete", danger: true }
+    );
+    if (!ok) return;
     const res = await fetch(`/api/organizations/${id}`, { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) {
@@ -165,7 +171,7 @@ export default function SettingsPage() {
     if (!file) return;
 
     if (file.size > 512 * 1024) {
-      alert("Logo must be under 512KB");
+      await notify("Logo must be under 512KB.", { title: "Logo too large" });
       return;
     }
 
@@ -177,7 +183,7 @@ export default function SettingsPage() {
     if (data.url) {
       setSettings((prev) => prev ? { ...prev, logoUrl: data.url } : prev);
     } else if (data.error) {
-      alert(data.error);
+      await notify(data.error, { title: "Upload failed" });
     }
     setUploading(false);
   }
@@ -223,7 +229,12 @@ export default function SettingsPage() {
   }
 
   async function deletePreset(id: string) {
-    if (!confirm("Delete this preset item?")) return;
+    const ok = await confirm("Delete this preset item?", {
+      title: "Delete preset",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/preset-items/${id}`, { method: "DELETE" });
     setPresetItems((prev) => prev.filter((p) => p.id !== id));
   }
@@ -235,7 +246,9 @@ export default function SettingsPage() {
         .filter(([, v]) => v)
         .map(([k]) => k);
       if (selected.length === 0) {
-        alert("Please select at least one section to export.");
+        await notify("Please select at least one section to export.", {
+          title: "Nothing selected",
+        });
         setBackupLoading(false);
         return;
       }
@@ -251,7 +264,7 @@ export default function SettingsPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      alert("Failed to export backup");
+      await notify("Failed to export backup.", { title: "Export failed" });
     }
     setBackupLoading(false);
   }
@@ -271,7 +284,7 @@ export default function SettingsPage() {
       });
       const result = await res.json();
       if (result.error) {
-        alert(result.error);
+        await notify(result.error, { title: "Import failed" });
       } else {
         setRestoreResult(result.imported);
         // Refresh presets list
@@ -280,7 +293,9 @@ export default function SettingsPage() {
         router.refresh();
       }
     } catch {
-      alert("Invalid backup file. Please select a valid QuickBill backup.");
+      await notify("Please select a valid QuickBill backup file.", {
+        title: "Invalid backup file",
+      });
     }
     setRestoreLoading(false);
     // Reset file input
@@ -369,8 +384,11 @@ export default function SettingsPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => {
-                        const newName = prompt("Rename organization", o.name);
+                      onClick={async () => {
+                        const newName = await prompt("Enter a new name for this organization.", {
+                          title: "Rename organization",
+                          defaultValue: o.name,
+                        });
                         if (newName) renameOrg(o.id, newName);
                       }}
                       className="text-xs text-primary hover:underline"

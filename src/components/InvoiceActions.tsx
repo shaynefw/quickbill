@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { generateInvoicePdf } from "@/lib/generatePdf";
 import { localDateString, formatDate } from "@/lib/dates";
+import { useDialog } from "@/components/DialogProvider";
 
 export default function InvoiceActions({
   invoiceId,
@@ -20,6 +21,7 @@ export default function InvoiceActions({
   receiptSentAt?: string | Date | null;
 }) {
   const router = useRouter();
+  const { notify, confirm } = useDialog();
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [receiptSent, setReceiptSent] = useState(Boolean(receiptSentAt));
@@ -49,7 +51,9 @@ export default function InvoiceActions({
       const doc = await generateInvoicePdf(invoice, user);
       doc.save(`${invoice.invoiceNumber}.pdf`);
     } catch {
-      alert("Failed to generate PDF");
+      await notify("The PDF could not be generated. Please try again.", {
+        title: "PDF failed",
+      });
     }
     setDownloading(false);
   }
@@ -212,7 +216,12 @@ export default function InvoiceActions({
 
   async function deleteInvoice() {
     setOpen(false);
-    if (!confirm("Delete this invoice? This cannot be undone.")) return;
+    const ok = await confirm("This cannot be undone.", {
+      title: "Delete this invoice?",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/invoices/${invoiceId}`, { method: "DELETE" });
     router.push("/invoices");
     router.refresh();
